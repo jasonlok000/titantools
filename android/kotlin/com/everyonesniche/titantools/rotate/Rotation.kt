@@ -57,6 +57,7 @@ object Rotation {
             prefs.getInt(Prefs.ROTATION_SAVED_ROTATION, -1).takeIf { it >= 0 },
         )
         try {
+            Shell.fixedToUserRotation(false)
             val writes = RotationRule.restoreWrites(saved, readSystem(context, Settings.System.ACCELEROMETER_ROTATION),
                 readSystem(context, Settings.System.USER_ROTATION))
             for ((name, value) in writes) {
@@ -97,7 +98,10 @@ object Rotation {
                 !Shizuku.running() -> "Start Shizuku, then try again."
                 !Shizuku.allowed() -> "Allow Titan Tools in Shizuku first. Open Titan Tools to set it up."
                 else -> try {
-                    val target = RotationRule.next(current(app))
+                    // The rotation asked for, not the screen's: an app that insists on portrait could hold the screen upright.
+                    val chosen = readSystem(app, Settings.System.USER_ROTATION)
+                        .takeIf { readSystem(app, Settings.System.ACCELEROMETER_ROTATION) == 0 } ?: current(app)
+                    val target = RotationRule.next(chosen)
                     Shell.lockRotation(target)
                     RotationRule.label(target)
                 } catch (error: Exception) {

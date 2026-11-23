@@ -65,6 +65,14 @@ object Shell {
     fun lockRotation(rotation: Int) {
         require(rotation in 0..3) { "Not a rotation" }
         RemoteProcess.run(5_000, arrayOf("/system/bin/wm", "user-rotation", "lock", rotation.toString()))
+        // Most apps ask for portrait, and Android follows the app over a locked rotation, so the screen stayed upright (owner's
+        // phone, 2026-11-22). Fixed to the user's rotation, the screen turns whatever the app asks; portrait hands it back.
+        fixedToUserRotation(rotation != 0)
+    }
+
+    /** Whether the screen follows the locked rotation even against what the app in front asks for. */
+    fun fixedToUserRotation(on: Boolean) {
+        RemoteProcess.run(5_000, arrayOf("/system/bin/wm", "fixed-to-user-rotation", if (on) "enabled" else "default"))
     }
 
     /** Rotation, turned off: puts back the phone's own auto-rotate (0 or 1) or locked rotation (0 to 3). */
