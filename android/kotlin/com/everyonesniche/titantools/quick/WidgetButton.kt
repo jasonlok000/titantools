@@ -21,7 +21,7 @@ object WidgetButton {
     const val HOST_ID = 4711
     private const val LIST = "widget_buttons"
 
-    fun host(context: Context) = AppWidgetHost(context.applicationContext, HOST_ID)
+    fun host(context: Context): AppWidgetHost = TitanWidgetHost(context.applicationContext, HOST_ID)
 
     // The list, kept as JSON in Titan Tools' settings.
 
