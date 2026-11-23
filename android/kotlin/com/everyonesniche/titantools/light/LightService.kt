@@ -52,6 +52,7 @@ class LightService : Service(), SensorEventListener {
     private var assertedAt = 0L
     private var level = Prefs.DEFAULT_LEVEL
     private var unsupported = false
+    private var darkLux = Float.NaN
     private var lastNotification = ""
     private var stopListening: List<() -> Unit> = emptyList()
 
@@ -90,17 +91,26 @@ class LightService : Service(), SensorEventListener {
             worker.post { shutDown() }
             return START_NOT_STICKY
         }
-        // Settings changed: new thresholds and level.
+        // Settings may have changed: a new threshold starts the reading afresh, a new level applies at once. Nothing changed
+        // (as when the service has only just started): nothing to do, so the light never flickers.
         worker.post {
-            rebuildPolicy()
-            if (lit) setLit(false)
-            screenChanged()
+            val darkChanged = Prefs.darkLux(this) != darkLux
+            val levelChanged = Prefs.level(this) != level
+            if (darkChanged) {
+                rebuildPolicy()
+                if (lit) setLit(false)
+                screenChanged()
+            } else if (levelChanged) {
+                level = Prefs.level(this)
+                if (lit) setLit(true)
+            }
         }
         return START_STICKY
     }
 
     private fun rebuildPolicy() {
         val dark = Prefs.darkLux(this)
+        darkLux = dark
         level = Prefs.level(this)
         policy = LightPolicy(dark, Prefs.brightLux(dark), 0, 250).apply {
             setEnabled(true)
