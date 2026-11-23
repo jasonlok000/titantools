@@ -16,6 +16,8 @@ object Prefs {
     const val PHONE_DPI = "phone_dpi"
     const val TABLET_DPI = "tablet_dpi"
     const val TIMEOUT_MIGRATED = "timeout_migrated"
+    /** Titan Tools set keyboard_brightness_timeout to 0 and puts the backup back when the light tool goes off. */
+    const val TIMEOUT_OWNED = "timeout_owned"
 
     /** The keyboard light's levels: the firmware's own lit keyboard writes 24. */
     val LEVELS = mapOf("low" to 8, "medium" to 24, "high" to 64)

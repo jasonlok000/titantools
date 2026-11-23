@@ -62,6 +62,20 @@ private fun migration() {
     check("garbage backup: nothing", TimeoutMigration.restoreValue("0", "abc") == null)
     check("out of range backup: nothing", TimeoutMigration.restoreValue("0", "-5") == null)
     check("too big backup: nothing", TimeoutMigration.restoreValue("0", "4294967296") == null)
+
+    // While the tool is on, Titan Tools owns the light: timeout 0, the phone's value saved as the backup if there's none.
+    val take = TimeoutMigration::takeWrites
+    check("take: backup kept, timeout to 0", take("-1", "-1") == listOf(TimeoutMigration.Write(false, "0")))
+    check("take: no backup, saved first", take("30000", TimeoutMigration.MISSING) ==
+        listOf(TimeoutMigration.Write(true, "30000"), TimeoutMigration.Write(false, "0")))
+    check("take: unusable backup, saved first", take("-1", "abc") ==
+        listOf(TimeoutMigration.Write(true, "-1"), TimeoutMigration.Write(false, "0")))
+    check("take: already 0, nothing", take("0", "-1").isEmpty())
+    check("take: already 0 and no backup, nothing (never saves 0)", take("0", TimeoutMigration.MISSING).isEmpty())
+    check("take: missing timeout never blocks", take(TimeoutMigration.MISSING, "-1").isEmpty())
+    check("take: unreadable timeout never blocks", take(null, null).isEmpty())
+    check("release: owned 0 goes back to -1", TimeoutMigration.restoreValue("0", "-1") == "-1")
+    check("release after take: back to the saved value", TimeoutMigration.restoreValue("0", "30000") == "30000")
 }
 
 private fun vendorReplies() {

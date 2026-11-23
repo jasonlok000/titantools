@@ -52,6 +52,7 @@ class LightService : Service(), SensorEventListener {
     private var loopStarted = 0L
     private var level = Prefs.DEFAULT_LEVEL
     private var unsupported = false
+    private var timeoutCheckedAt = 0L
     private var lastNotification = ""
     private var stopListening: List<() -> Unit> = emptyList()
 
@@ -156,6 +157,12 @@ class LightService : Service(), SensorEventListener {
         val mode = LightRule.mode(link, now)
         val status: String
         var want = false
+        // Owns the key light, screen on or off: checked as the service starts and every minute, in case the phone's settings
+        // changed it (LightRecovery.takeTimeout).
+        if (Shizuku.allowed() && (timeoutCheckedAt == 0L || SystemClock.elapsedRealtime() - timeoutCheckedAt > 60_000)) {
+            timeoutCheckedAt = SystemClock.elapsedRealtime()
+            LightRecovery.takeTimeout(this)
+        }
         when {
             light == null -> status = "Paused: this phone has no light sensor"
             !Shizuku.running() -> status = if (Shizuku.installed(this)) "Paused: start Shizuku" else "Paused: Shizuku isn't installed"
@@ -164,7 +171,6 @@ class LightService : Service(), SensorEventListener {
             unsupported -> status = "Paused: the firmware didn't take the light"
             !screenOn -> status = "Off: screen off"
             else -> {
-                LightRecovery.migrateTimeout(this)
                 val dark = policy.shouldLight()
                 want = LightRule.lit(dark, screenOn, link, now)
                 status = when {
@@ -250,6 +256,8 @@ class LightService : Service(), SensorEventListener {
             lit = true
             setLit(false)
         }
+        // The tool is off: the firmware gets its own key light back.
+        LightRecovery.releaseTimeout(this)
         Status.light("Off", false)
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()

@@ -47,11 +47,20 @@ object Shell {
         return VendorReply.string(result.out)
     }
 
-    /** Only for putting the firmware's backup back once (TimeoutMigration). Reads it back to check. */
-    fun writeTimeout(value: String): Boolean {
+    /**
+     * The firmware's key light timeout: 0 while the Keyboard light tool owns the light, the backup when it lets go
+     * (TimeoutMigration). The same write as old NightKeys, read back to check.
+     */
+    fun writeTimeout(value: String): Boolean = writeVendor(TIMEOUT, value)
+
+    /** Saves the phone's own timeout before Titan Tools sets it to 0, when the firmware has no backup of it. */
+    fun writeTimeoutBackup(value: String): Boolean = writeVendor(TIMEOUT_BACKUP, value)
+
+    private fun writeVendor(key: String, value: String): Boolean {
+        require(key == TIMEOUT || key == TIMEOUT_BACKUP)
         require(TimeoutMigration.valid(value)) { "Not a timeout" }
-        RemoteProcess.run(4_000, arrayOf(SERVICE, "call", "agui_common", "4", "s16", TIMEOUT, "s16", value.trim()))
-        return readTimeout() == value.trim()
+        RemoteProcess.run(4_000, arrayOf(SERVICE, "call", "agui_common", "4", "s16", key, "s16", value.trim()))
+        return readVendor(key) == value.trim()
     }
 
     /** Scale Toggle's display commands: wm size, wm density, wm density <120–8192>, wm density reset. */
