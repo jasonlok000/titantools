@@ -1,0 +1,6 @@
+<resources>
+    <!-- The Titan 2 Elite orange, behind the app icon, as in TitanKeys. -->
+    <color name="titantools_orange">#EF804E</color>
+    <string name="hold_service_summary">Hold a letter on the built-in keyboard to type the symbol printed on it.</string>
+    <string name="hold_service_description">While a text field is focused, Titan Tools briefly holds back plain letter presses from the built-in keyboard. A quick press types the letter; a held press types its symbol. Both are typed again through Android\'s input system with Shizuku, so your keyboard app still gets them. Keys with Shift, Alt or other modifiers, other keys and password fields pass through untouched. It steps aside while TitanKeys is your keyboard. No text is read, no screen content is looked at, and nothing is stored or sent.</string>
+</resources>

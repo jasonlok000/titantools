@@ -1,0 +1,12 @@
+node_modules/
+.ink/
+dist/
+android/build/
+/signing/
+.gradle/
+.kotlin/
+*.log
+.env*
+*.keystore
+*.jks
+*.p12

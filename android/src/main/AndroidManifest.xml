@@ -1,0 +1,92 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- The link with TitanKeys. TitanKeys declares the same permission, so either app can be installed first. Only apps
+         signed with the same key can hold it. -->
+    <permission
+        android:name="com.everyonesniche.titantools.permission.LINK"
+        android:label="Talk to Titan Tools"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="com.everyonesniche.titantools.permission.LINK" />
+    <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Android's own uninstall prompt for the three old apps. -->
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+    <uses-feature android:name="android.hardware.sensor.light" android:required="false" />
+    <queries>
+        <package android:name="moe.shizuku.privileged.api" />
+        <package android:name="com.titankeys" />
+        <package android:name="com.everyonesniche.nightkeys" />
+        <package android:name="dev.everyonesniche.scaletoggle" />
+        <package android:name="com.jasonlok.titanhold" />
+        <package android:name="com.agui.shortcutsettings" />
+        <package android:name="com.android.vending" />
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+    </queries>
+    <application>
+        <meta-data android:name="moe.shizuku.client.V3_SUPPORT" android:value="true" />
+        <provider
+            android:name="com.everyonesniche.titantools.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:multiprocess="false"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
+        <!-- Scale Toggle: its own launcher entry, shown only while the tool is on, for the side button's long press. -->
+        <activity
+            android:name="com.everyonesniche.titantools.scale.ScaleActivity"
+            android:label="Scale Toggle"
+            android:icon="@mipmap/scale_toggle_icon"
+            android:roundIcon="@mipmap/scale_toggle_icon"
+            android:enabled="false"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity="com.everyonesniche.titantools.scale"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:configChanges="density|fontScale|keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode|locale|layoutDirection">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <service
+            android:name="com.everyonesniche.titantools.light.LightService"
+            android:exported="false"
+            android:stopWithTask="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="User-enabled, continuous ambient-light monitoring that turns the physical keyboard backlight on in the dark and off when bright or when the screen turns off." />
+        </service>
+        <service
+            android:name="com.everyonesniche.titantools.hold.HoldService"
+            android:label="Titan Tools: Hold Symbols"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data android:name="android.accessibilityservice" android:resource="@xml/hold_service" />
+        </service>
+        <receiver
+            android:name="com.everyonesniche.titantools.light.LinkReceiver"
+            android:exported="true"
+            android:permission="com.everyonesniche.titantools.permission.LINK">
+            <intent-filter>
+                <action android:name="com.everyonesniche.titantools.action.TYPING" />
+            </intent-filter>
+        </receiver>
+        <receiver android:name="com.everyonesniche.titantools.core.BootReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>
