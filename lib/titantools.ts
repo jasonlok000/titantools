@@ -17,6 +17,8 @@ export type State = {
     /** Night hours, in minutes from midnight. */
     nightFrom: number; nightTo: number;
     staySeconds: number;
+    /** Only while typing in Night mode. */
+    nightTyping: boolean;
     /** TitanKeys is the keyboard; Typing falls back to the firmware's key presses (no 0-second stay then). */
     titanKeysKeyboard: boolean; keyPresses: boolean;
     /** TitanKeys has sent a typing message, and sent one in the last 10 minutes. */
@@ -41,7 +43,7 @@ export type State = {
 export type Setting =
   | "light_on" | "scale_on" | "hold_on" | "rotation_on" | "flash_on" | "night_on" | "play_on" | "kill_on" | "hold_vibrate" | "hold_passwords"
   | "light_level" | "light_dark_lux" | "light_stay_seconds" | "light_preset" | "light_activity"
-  | "light_dark_room" | "light_night_hours" | "light_dark_theme" | "light_any_time" | "light_night_from" | "light_night_to"
+  | "light_dark_room" | "light_night_hours" | "light_dark_theme" | "light_any_time" | "light_night_from" | "light_night_to" | "light_night_typing"
   | "night_extra_dim" | "night_dim_level" | "night_dark_theme"
   | "hold_millis" | "phone_dpi" | "tablet_dpi";
 

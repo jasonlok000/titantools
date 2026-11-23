@@ -295,7 +295,15 @@ private fun killApp() {
     check("kill: package names", KillRule.valid("com.android.deskclock") && !KillRule.valid("com.x; rm -rf") && !KillRule.valid("nodots"))
 }
 
+private fun nightTyping() {
+    val A = LightRule.Activity.Screen
+    check("night typing: on and Night mode on gives Typing", LightRule.effectiveActivity(A, true, true) == LightRule.Activity.Typing)
+    check("night typing: Night mode off keeps the rule", LightRule.effectiveActivity(A, true, false) == A)
+    check("night typing: switch off keeps the rule", LightRule.effectiveActivity(LightRule.Activity.Field, false, true) == LightRule.Activity.Field)
+}
+
 fun main() {
+    nightTyping()
     killApp()
     widgetList()
     nightMode()

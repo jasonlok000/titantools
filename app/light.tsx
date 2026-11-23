@@ -49,7 +49,11 @@ export default function Light() {
       {light.activity === "typing" && light.keyPresses && !(light.titanKeysKeyboard && !light.linkSeen) &&
         <Note>Without TitanKeys as your keyboard, key presses light the keys.</Note>}
     </Section>}
-    {light.preset !== "phone" && light.activity !== "screen" && <Section title="Stay lit after">
+    {light.preset !== "phone" && <Section title="Night mode">
+      <Toggle label="Only while typing in Night mode" value={light.nightTyping} onChange={on => void set("light_night_typing", on)} />
+      <Note>While Titan Tools' Night mode is on, the keys light only as you type.</Note>
+    </Section>}
+    {light.preset !== "phone" && (light.activity !== "screen" || light.nightTyping) && <Section title="Stay lit after">
       <SettingsChoices value={String(stay)} options={stays.map(s => ({ value: String(s), label: `${s} seconds` }))}
         onChange={value => void set("light_stay_seconds", Number(value))} />
       {light.activity === "typing" && light.keyPresses && <Note>No 0 with key presses: they keep the light on at least a second.</Note>}

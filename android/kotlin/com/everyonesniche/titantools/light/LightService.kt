@@ -130,7 +130,7 @@ class LightService : Service(), SensorEventListener {
         worker.post(evaluate)
     }
 
-    private fun settingsKey() = "${Prefs.preset(this)}/${Prefs.darkness(this)}/${Prefs.activity(this)}/${Prefs.staySeconds(this)}/" +
+    private fun settingsKey() = "${Prefs.on(this, Prefs.LIGHT_NIGHT_TYPING)}/${Prefs.on(this, Prefs.NIGHT_ACTIVE)}/${Prefs.preset(this)}/${Prefs.darkness(this)}/${Prefs.activity(this)}/${Prefs.staySeconds(this)}/" +
         "${Prefs.nightFrom(this)}/${Prefs.nightTo(this)}"
 
     private fun rebuildPolicy() {
@@ -191,7 +191,8 @@ class LightService : Service(), SensorEventListener {
         val link = Link.current(this)
         val titanKeys = HoldPause.pausedFor(Settings.Secure.getString(contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD))
         val darkness = Prefs.darkness(this)
-        val activity = Prefs.activity(this)
+        val nightTyping = Prefs.on(this, Prefs.LIGHT_NIGHT_TYPING) && Prefs.on(this, Prefs.NIGHT_ACTIVE)
+        val activity = LightRule.effectiveActivity(Prefs.activity(this), Prefs.on(this, Prefs.LIGHT_NIGHT_TYPING), Prefs.on(this, Prefs.NIGHT_ACTIVE))
         val stayMillis = Prefs.staySeconds(this) * 1000L
         val source = LightRule.source(activity, titanKeys, LightRule.alive(link, now))
         val ready = Shizuku.allowed() && !Installed.blocked(this, OldApps.Tool.Light)
@@ -259,6 +260,8 @@ class LightService : Service(), SensorEventListener {
             level = LightRecovery.own(this, true, level)
             try { Shell.light(level) } catch (error: Exception) { Log.w(TAG, "Couldn't write the light again", error) }
         }
+        // While Night mode makes it Typing, the card says so.
+        if (nightTyping && !status.startsWith("Paused") && Prefs.preset(this) != LightRule.Preset.PhonesOwn) status = "Night mode: only while typing"
         Status.light(status, source == LightRule.Source.LinkTyping || source == LightRule.Source.LinkField)
         updateNotification(Status.lightText)
 

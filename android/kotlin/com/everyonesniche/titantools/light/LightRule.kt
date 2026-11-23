@@ -54,6 +54,13 @@ object LightRule {
         }
     }
 
+    /**
+     * The activity in use: Typing while "Only while typing in Night mode" is on and Titan Tools' Night mode is on, else the
+     * chosen one.
+     */
+    fun effectiveActivity(chosen: Activity, nightTyping: Boolean, nightModeOn: Boolean): Activity =
+        if (nightTyping && nightModeOn) Activity.Typing else chosen
+
     /** Where the activity is read from, given the keyboard and the link. */
     enum class Source { Screen, LinkField, LinkTyping, InputFlag, FirmwareKeys }
 

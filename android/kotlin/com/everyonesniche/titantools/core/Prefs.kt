@@ -31,6 +31,8 @@ object Prefs {
     const val LIGHT_NIGHT_FROM = "light_night_from"
     const val LIGHT_NIGHT_TO = "light_night_to"
     const val LIGHT_ACTIVITY = "light_activity"
+    /** Only while typing in Night mode: Typing while Titan Tools' Night mode is on, whatever the rule. */
+    const val LIGHT_NIGHT_TYPING = "light_night_typing"
     const val FLASH_ON = "flash_on"
     const val PLAY_ON = "play_on"
     const val KILL_ON = "kill_on"

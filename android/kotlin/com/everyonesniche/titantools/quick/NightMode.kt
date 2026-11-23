@@ -52,6 +52,8 @@ object NightMode {
             main.post {
                 done(message)
                 Status.changed()
+                // The keyboard light may follow Night mode ("Only while typing in Night mode"): look again at once.
+                com.everyonesniche.titantools.light.LightService.sync(app)
             }
         }
     }

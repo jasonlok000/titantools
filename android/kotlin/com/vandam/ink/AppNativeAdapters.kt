@@ -173,7 +173,7 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
         val editor = Prefs.of(activity).edit()
         when (key) {
             Prefs.LIGHT_ON, Prefs.SCALE_ON, Prefs.HOLD_ON, Prefs.ROTATION_ON, Prefs.FLASH_ON, Prefs.NIGHT_ON, Prefs.PLAY_ON, Prefs.WIDGET_ON, Prefs.KILL_ON,
-            Prefs.HOLD_VIBRATE, Prefs.HOLD_PASSWORDS, Prefs.NIGHT_EXTRA_DIM, Prefs.NIGHT_DARK_THEME -> editor.putBoolean(key, value as Boolean)
+            Prefs.HOLD_VIBRATE, Prefs.HOLD_PASSWORDS, Prefs.NIGHT_EXTRA_DIM, Prefs.NIGHT_DARK_THEME, Prefs.LIGHT_NIGHT_TYPING -> editor.putBoolean(key, value as Boolean)
             // Editing a list makes the light's rule Custom.
             Prefs.LIGHT_DARK_ROOM, Prefs.LIGHT_NIGHT_HOURS, Prefs.LIGHT_DARK_THEME, Prefs.LIGHT_ANY_TIME ->
                 editor.putBoolean(key, value as Boolean).putString(Prefs.LIGHT_PRESET, LightRule.Preset.Custom.id)
@@ -210,7 +210,7 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
         when (key) {
             Prefs.LIGHT_ON, Prefs.LIGHT_LEVEL, Prefs.LIGHT_DARK_LUX, Prefs.LIGHT_WHEN, Prefs.LIGHT_STAY_SECONDS, Prefs.LIGHT_PRESET,
             Prefs.LIGHT_DARK_ROOM, Prefs.LIGHT_NIGHT_HOURS, Prefs.LIGHT_DARK_THEME, Prefs.LIGHT_ANY_TIME, Prefs.LIGHT_ACTIVITY,
-            Prefs.LIGHT_NIGHT_FROM, Prefs.LIGHT_NIGHT_TO -> LightService.sync(activity)
+            Prefs.LIGHT_NIGHT_FROM, Prefs.LIGHT_NIGHT_TO, Prefs.LIGHT_NIGHT_TYPING -> LightService.sync(activity)
             Prefs.SCALE_ON -> ScaleActivity.sync(activity)
             Prefs.ROTATION_ON -> Rotation.switched(activity, value as Boolean)
             Prefs.FLASH_ON, Prefs.PLAY_ON -> Shortcuts.sync(activity)
@@ -336,7 +336,7 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
                 .put("preset", Prefs.preset(activity).id).put("activity", lightActivity.id)
                 .put("darkRoom", darkness.darkRoom).put("nightHours", darkness.nightHours).put("darkTheme", darkness.darkTheme)
                 .put("anyTime", darkness.anyTime).put("nightFrom", Prefs.nightFrom(activity)).put("nightTo", Prefs.nightTo(activity))
-                .put("staySeconds", Prefs.staySeconds(activity)).put("titanKeysKeyboard", titanKeysKeyboard)
+                .put("staySeconds", Prefs.staySeconds(activity)).put("nightTyping", prefs.getBoolean(Prefs.LIGHT_NIGHT_TYPING, false)).put("titanKeysKeyboard", titanKeysKeyboard)
                 .put("keyPresses", source == LightRule.Source.FirmwareKeys)
                 .put("linkSeen", link.seen).put("linkAlive", LightRule.alive(link, now)))
             .put("scale", JSONObject().put("on", scaleOn).put("status", scaleStatus)
