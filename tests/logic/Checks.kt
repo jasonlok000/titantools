@@ -10,6 +10,7 @@ import com.everyonesniche.titantools.light.VendorKeys
 import com.everyonesniche.titantools.light.VendorReply
 import com.everyonesniche.titantools.rotate.RotationRule
 import com.everyonesniche.titantools.quick.NightRule
+import com.everyonesniche.titantools.quick.WidgetList
 import com.everyonesniche.titantools.scale.ScaleMath
 import com.everyonesniche.titantools.scale.ScaleSettings
 import com.everyonesniche.titantools.scale.WmOutput
@@ -257,7 +258,22 @@ private fun nightMode() {
     check("off: the theme only if Night mode set it", NightRule.offTheme(saved, true) == false && NightRule.offTheme(saved, false) == null)
 }
 
+private fun widgetList() {
+    fun e(id: String, slot: Int = 0) = WidgetList.Entry(id, "Door $id", 12, "1Valet", "Fob", "0/1", "0.5,0.5", 800, 300, slot)
+    val list = listOf(e("w1", 1), e("w2"))
+    check("widgets: a slot holds one button", WidgetList.assignSlot(list, "w2", 1).map { it.slot } == listOf(0, 1))
+    check("widgets: none frees the slot", WidgetList.assignSlot(list, "w1", 0).map { it.slot } == listOf(0, 0))
+    check("widgets: a bad slot is none", WidgetList.assignSlot(list, "w2", 9).map { it.slot } == listOf(1, 0))
+    check("widgets: for a slot", WidgetList.forSlot(list, 1)?.id == "w1" && WidgetList.forSlot(list, 2) == null && WidgetList.forSlot(list, 0) == null)
+    check("widgets: add", WidgetList.upsert(list, e("w3")).size == 3)
+    check("widgets: replace", WidgetList.upsert(list, e("w2", 3)).map { it.slot } == listOf(1, 3))
+    check("widgets: remove", WidgetList.remove(list, "w1").map { it.id } == listOf("w2"))
+    check("widgets: names", WidgetList.defaultName("1Valet", "Fob") == "1Valet: Fob" &&
+        WidgetList.defaultName("Clock", "the button you picked") == "Clock")
+}
+
 fun main() {
+    widgetList()
     nightMode()
     rotation()
     levels()

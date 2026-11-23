@@ -9,16 +9,18 @@ import android.util.Log
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.Toast
-import com.everyonesniche.titantools.core.Prefs
 
 /**
- * The "Widget button" launcher entry: shows the picked widget unseen, waits for it to draw, clicks the picked button (which
- * fires the widget's own action), and closes.
+ * Presses a widget button: shows its widget unseen, waits for it to draw its buttons (a Glance widget draws a loading layout
+ * first), clicks the picked one (which fires the widget's own action), and closes. Opened by a helper app's slot ([EXTRA_SLOT]),
+ * an Android shortcut or the list ([EXTRA_ENTRY]). With [EXTRA_DRY] it only says what it would press.
  */
 class WidgetButtonActivity : Activity() {
     private val main = Handler(Looper.getMainLooper())
     private val host by lazy { WidgetButton.host(this) }
     private var view: AppWidgetHostView? = null
+    private var entry: WidgetList.Entry? = null
+    private var dry = false
     private var tries = 0
 
     override fun onCreate(state: Bundle?) {
@@ -26,41 +28,51 @@ class WidgetButtonActivity : Activity() {
         @Suppress("DEPRECATION") overridePendingTransition(0, 0)
         window.addFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
         if (state != null) return close(null)
-        if (!Prefs.on(this, Prefs.WIDGET_ON)) return close("Widget button is off. Turn it on in Titan Tools.")
-        val id = WidgetButton.widgetId(this)
-        val info = WidgetButton.info(this) ?: return close("Pick the widget again in Titan Tools.")
+        dry = intent.getBooleanExtra(EXTRA_DRY, false)
+        val list = WidgetButton.all(this)
+        val slot = intent.getIntExtra(EXTRA_SLOT, 0)
+        val picked = if (slot > 0) WidgetList.forSlot(list, slot) else list.firstOrNull { it.id == intent.getStringExtra(EXTRA_ENTRY) }
+        if (picked == null) return close(if (slot > 0) "Nothing is in Widget $slot. Pick one in Titan Tools." else "Pick the widget again in Titan Tools.")
+        entry = picked
+        val info = WidgetButton.info(this, picked) ?: return close("Pick the widget again in Titan Tools.")
         host.startListening()
-        val prefs = Prefs.of(this)
-        val hostView = host.createView(applicationContext, id, info)
+        val hostView = host.createView(applicationContext, picked.widgetId, info)
         view = hostView
         // Laid out at the size it was picked at, but not seen.
         hostView.alpha = 0f
-        setContentView(FrameLayout(this).apply {
-            addView(hostView, FrameLayout.LayoutParams(prefs.getInt(Prefs.WIDGET_WIDTH, 800), prefs.getInt(Prefs.WIDGET_HEIGHT, 300)))
-        })
+        setContentView(FrameLayout(this).apply { addView(hostView, FrameLayout.LayoutParams(picked.width, picked.height)) })
         main.postDelayed(::attempt, 150)
     }
 
-    /** Looks for the picked button every 100 ms, up to 3 seconds, as the widget draws. */
+    /** Looks for the picked button every 100 ms, up to 6 seconds, as the widget draws. */
     private fun attempt() {
         val hostView = view ?: return close(null)
-        val prefs = Prefs.of(this)
-        val target = if (hostView.childCount > 0 && hostView.width > 0)
-            WidgetButton.find(hostView, prefs.getString(Prefs.WIDGET_PATH, null), prefs.getString(Prefs.WIDGET_SPOT, null)) else null
+        val picked = entry ?: return close(null)
+        val target = if (WidgetButton.hasPressable(hostView)) WidgetButton.find(hostView, picked.path, picked.spot) else null
         if (target != null) {
-            val pressed = try { WidgetButton.press(target) } catch (error: Exception) { Log.w("TitanTools", "Widget button", error); false }
+            if (dry) return close("Found ${WidgetButton.describe(target)} (${WidgetButton.pressKind(target)}). Not pressed.")
+            val pressed = try { WidgetButton.press(target) } catch (error: Exception) { Log.w(TAG, "Widget button", error); false }
+            Log.i(TAG, "Widget button ${picked.name}: ${if (pressed) "pressed" else "couldn't press"} (${WidgetButton.pressKind(target)})")
             // A moment for the widget's action to start before the host goes.
-            main.postDelayed({ close(if (pressed) null else "Pick the widget again in Titan Tools.") }, 400)
+            main.postDelayed({ close(if (pressed) null else "Pick the widget again in Titan Tools.") }, 600)
             return
         }
-        if (++tries >= 30) return close("Pick the widget again in Titan Tools.")
+        if (++tries >= 60) return close("Pick the widget again in Titan Tools.")
         main.postDelayed(::attempt, 100)
     }
 
     private fun close(message: String?) {
         if (message != null) Toast.makeText(applicationContext, message, Toast.LENGTH_SHORT).show()
+        main.removeCallbacksAndMessages(null)
         try { host.stopListening() } catch (ignored: Exception) {}
         finishAndRemoveTask()
         @Suppress("DEPRECATION") overridePendingTransition(0, 0)
+    }
+
+    companion object {
+        const val EXTRA_ENTRY = "entry"
+        const val EXTRA_SLOT = "slot"
+        const val EXTRA_DRY = "dry"
+        private const val TAG = "TitanTools"
     }
 }

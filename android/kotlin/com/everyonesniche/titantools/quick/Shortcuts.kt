@@ -19,8 +19,8 @@ object Shortcuts {
 
     fun sync(context: Context) {
         for ((key, activity) in entries) {
-            val state = if (Prefs.on(context, key)) PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-                else PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+            // No launcher entries any more (the helper apps replace them): any an earlier build turned off come back.
+            val state = PackageManager.COMPONENT_ENABLED_STATE_DEFAULT
             val component = ComponentName(context, activity)
             if (context.packageManager.getComponentEnabledSetting(component) != state)
                 context.packageManager.setComponentEnabledSetting(component, state, PackageManager.DONT_KILL_APP)

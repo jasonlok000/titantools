@@ -125,8 +125,8 @@ class ScaleActivity : Activity() {
 
         /** Shows the "Scale Toggle" launcher entry, which the side button can open, only while the tool is on. */
         fun sync(context: Context) {
-            val state = if (Prefs.on(context, Prefs.SCALE_ON)) PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-                else PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+            // No launcher entry any more (the helper apps replace it): an entry an earlier build turned off comes back.
+            val state = PackageManager.COMPONENT_ENABLED_STATE_DEFAULT
             val component = ComponentName(context, ScaleActivity::class.java)
             if (context.packageManager.getComponentEnabledSetting(component) != state)
                 context.packageManager.setComponentEnabledSetting(component, state, PackageManager.DONT_KILL_APP)

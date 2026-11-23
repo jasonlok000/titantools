@@ -10,3 +10,4 @@ android/build/
 *.keystore
 *.jks
 *.p12
+android/assets/helpers/

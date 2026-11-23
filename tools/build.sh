@@ -42,6 +42,10 @@ set +x
 . signing/credentials.env
 export INK_KEYSTORE_PASSWORD
 export INK_KEY_PASSWORD="${INK_KEY_PASSWORD:-$INK_KEYSTORE_PASSWORD}"
+# The helper apps (one per action, for Shortcut keys), signed with the same key, go inside Titan Tools to install from it.
+rm -rf android/assets/helpers dist/helpers
+bash helpers/build.sh android/assets/helpers signing/nightkeys-release.p12
+mkdir -p dist/helpers && cp android/assets/helpers/*.apk dist/helpers/
 bun run build
 ls -t dist/*.apk | head -1
 echo "RESULT: PASS"

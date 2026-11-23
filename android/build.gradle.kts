@@ -7,4 +7,6 @@ android {
         minSdk = 34
         consumerProguardFiles("proguard-rules.pro")
     }
+    // The helper apps, built by tools/build.sh into android/assets/helpers.
+    sourceSets.getByName("main") { assets.srcDir("assets") }
 }

@@ -6,6 +6,14 @@
         android:label="Talk to Titan Tools"
         android:protectionLevel="signature" />
     <uses-permission android:name="com.everyonesniche.titantools.permission.LINK" />
+    <!-- The helper apps open Titan Tools' actions with this. They declare it too, so install order doesn't matter. -->
+    <permission
+        android:name="com.everyonesniche.titantools.permission.TRIGGER"
+        android:label="Open Titan Tools' actions"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="com.everyonesniche.titantools.permission.TRIGGER" />
+    <!-- Installs the helper apps that come inside Titan Tools, when asked. Android asks first. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
@@ -21,6 +29,16 @@
         <package android:name="dev.everyonesniche.scaletoggle" />
         <package android:name="com.jasonlok.titanhold" />
         <package android:name="com.agui.shortcutsettings" />
+        <package android:name="com.everyonesniche.titantools.layout" />
+        <package android:name="com.everyonesniche.titantools.rotate" />
+        <package android:name="com.everyonesniche.titantools.flashlight" />
+        <package android:name="com.everyonesniche.titantools.night" />
+        <package android:name="com.everyonesniche.titantools.playpause" />
+        <package android:name="com.everyonesniche.titantools.widget1" />
+        <package android:name="com.everyonesniche.titantools.widget2" />
+        <package android:name="com.everyonesniche.titantools.widget3" />
+        <package android:name="com.everyonesniche.titantools.widget4" />
+        <package android:name="com.everyonesniche.titantools.widget5" />
         <package android:name="com.android.vending" />
         <intent>
             <action android:name="android.intent.action.VIEW" />
@@ -36,123 +54,94 @@
             android:enabled="true"
             android:exported="true"
             android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
-        <!-- Scale Toggle: its own launcher entry, shown only while the tool is on, for the side button's long press. -->
         <activity
             android:name="com.everyonesniche.titantools.scale.ScaleActivity"
-            android:label="Scale Toggle"
-            android:icon="@mipmap/scale_toggle_icon"
-            android:roundIcon="@mipmap/scale_toggle_icon"
-            android:enabled="false"
-            android:exported="true"
+            android:exported="false"
             android:launchMode="singleTask"
             android:excludeFromRecents="true"
             android:noHistory="true"
             android:taskAffinity="com.everyonesniche.titantools.scale"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
-            android:configChanges="density|fontScale|keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode|locale|layoutDirection">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-        <!-- Rotation: the "Rotate" launcher entry, for Shortcut keys and the side button, there only while it's on. -->
+            android:configChanges="density|fontScale|keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode|locale|layoutDirection" />
         <activity
             android:name="com.everyonesniche.titantools.rotate.RotateActivity"
-            android:label="Rotate"
-            android:icon="@mipmap/rotate_icon"
-            android:roundIcon="@mipmap/rotate_icon"
-            android:enabled="false"
-            android:exported="true"
+            android:exported="false"
             android:launchMode="singleTask"
             android:excludeFromRecents="true"
             android:noHistory="true"
             android:taskAffinity="com.everyonesniche.titantools.rotate"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
-            android:configChanges="density|fontScale|keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode|locale|layoutDirection">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-        <!-- Shortcuts: one-press launcher entries for Shortcut keys and the side button, each there only while it's on. -->
+            android:configChanges="density|fontScale|keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode|locale|layoutDirection" />
         <activity
             android:name="com.everyonesniche.titantools.quick.FlashlightActivity"
-            android:label="Flashlight"
-            android:icon="@mipmap/flashlight_icon"
-            android:roundIcon="@mipmap/flashlight_icon"
-            android:enabled="false"
-            android:exported="true"
+            android:exported="false"
             android:launchMode="singleTask"
             android:excludeFromRecents="true"
             android:noHistory="true"
             android:taskAffinity="com.everyonesniche.titantools.flashlight"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
-            android:configChanges="density|fontScale|keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode|locale|layoutDirection">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+            android:configChanges="density|fontScale|keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode|locale|layoutDirection" />
         <activity
             android:name="com.everyonesniche.titantools.quick.NightModeActivity"
-            android:label="Night mode"
-            android:icon="@mipmap/night_icon"
-            android:roundIcon="@mipmap/night_icon"
-            android:enabled="false"
-            android:exported="true"
+            android:exported="false"
             android:launchMode="singleTask"
             android:excludeFromRecents="true"
             android:noHistory="true"
             android:taskAffinity="com.everyonesniche.titantools.night"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
-            android:configChanges="density|fontScale|keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode|locale|layoutDirection">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+            android:configChanges="density|fontScale|keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode|locale|layoutDirection" />
         <activity
             android:name="com.everyonesniche.titantools.quick.PlayPauseActivity"
-            android:label="Play/Pause"
-            android:icon="@mipmap/play_icon"
-            android:roundIcon="@mipmap/play_icon"
-            android:enabled="false"
-            android:exported="true"
+            android:exported="false"
             android:launchMode="singleTask"
             android:excludeFromRecents="true"
             android:noHistory="true"
             android:taskAffinity="com.everyonesniche.titantools.play"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
-            android:configChanges="density|fontScale|keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode|locale|layoutDirection">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+            android:configChanges="density|fontScale|keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode|locale|layoutDirection" />
         <activity
             android:name="com.everyonesniche.titantools.quick.WidgetButtonActivity"
-            android:label="Widget button"
-            android:icon="@mipmap/widget_icon"
-            android:roundIcon="@mipmap/widget_icon"
-            android:enabled="false"
-            android:exported="true"
+            android:exported="false"
             android:launchMode="singleTask"
             android:excludeFromRecents="true"
             android:noHistory="true"
             android:taskAffinity="com.everyonesniche.titantools.widget"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
-            android:configChanges="density|fontScale|keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode|locale|layoutDirection">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+            android:configChanges="density|fontScale|keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode|locale|layoutDirection" />
         <!-- Widget button's setup: pick a widget, then the button. -->
         <activity
             android:name="com.everyonesniche.titantools.quick.WidgetSetupActivity"
             android:exported="false"
             android:label="Widget button"
             android:theme="@android:style/Theme.Material.NoActionBar" />
+        <!-- The one-press actions, opened by the helper apps (one tiny app each, which Shortcut keys can pick) and by Titan
+             Tools' Android shortcuts. Only apps signed with the same key may open it. -->
+        <activity
+            android:name="com.everyonesniche.titantools.quick.TriggerActivity"
+            android:exported="true"
+            android:permission="com.everyonesniche.titantools.permission.TRIGGER"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity="com.everyonesniche.titantools.trigger"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="com.everyonesniche.titantools.action.TRIGGER" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+        <!-- Titan Tools' Android shortcuts, for the places that take one. -->
+        <activity
+            android:name="com.everyonesniche.titantools.quick.CreateShortcutActivity"
+            android:exported="true"
+            android:label="Titan Tools"
+            android:icon="@mipmap/ic_launcher"
+            android:theme="@android:style/Theme.Material.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.CREATE_SHORTCUT" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+        <receiver android:name="com.everyonesniche.titantools.quick.HelperApps$Result" android:exported="false" />
         <service
             android:name="com.everyonesniche.titantools.light.LightService"
             android:exported="false"

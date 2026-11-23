@@ -27,8 +27,10 @@ export type State = {
   rotation: { on: boolean; status: string };
   flash: { on: boolean; lit: boolean };
   play: { on: boolean };
-  /** Widget button: a widget is picked, its app and the picked button. */
-  widget: { on: boolean; picked: boolean; app: string; button: string };
+  /** Widget buttons: each a name, the widget's app, the picked button, its helper app slot (0 for none), and whether its widget is still there. */
+  widgets: WidgetButton[];
+  /** The helper apps, which Shortcut keys can pick: installed or not. */
+  helpers: { packageName: string; label: string; installed: boolean }[];
   night: { on: boolean; active: boolean; extraDim: boolean; dimLevel: number; darkTheme: boolean };
   oldApps: { packageName: string; name: string; tool: "light" | "scale" | "hold"; running: boolean }[];
   titanKeys: { installed: boolean; selected: boolean };
@@ -36,7 +38,7 @@ export type State = {
 
 /** The settings the screens can change, by their native names (Prefs.kt). */
 export type Setting =
-  | "light_on" | "scale_on" | "hold_on" | "rotation_on" | "flash_on" | "night_on" | "play_on" | "widget_on" | "hold_vibrate" | "hold_passwords"
+  | "light_on" | "scale_on" | "hold_on" | "rotation_on" | "flash_on" | "night_on" | "play_on" | "hold_vibrate" | "hold_passwords"
   | "light_level" | "light_dark_lux" | "light_stay_seconds" | "light_preset" | "light_activity"
   | "light_dark_room" | "light_night_hours" | "light_dark_theme" | "light_any_time" | "light_night_from" | "light_night_to"
   | "night_extra_dim" | "night_dim_level" | "night_dark_theme"
@@ -45,7 +47,7 @@ export type Setting =
 /** The pages setup and the cards open. */
 export type Page =
   | "shizukuStore" | "shizukuApp" | "developerOptions" | "aboutPhone" | "accessibility" | "appInfo" | "shortcutKeys"
-  | "titanKeysPage" | "titanKeysApp" | "scaleNow" | "widgetSetup" | "widgetNew";
+  | "titanKeysPage" | "titanKeysApp" | "scaleNow";
 
 const native = (operation: string, payload: object = {}) => callNative("titantools", operation, payload);
 
@@ -82,4 +84,19 @@ export const clock = (minutes: number) =>
   `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
 
 /** How many of the Shortcuts are on, for the home card. */
-export const shortcutsOn = (s: State) => [s.scale.on, s.rotation.on, s.flash.on, s.night.on, s.play.on, s.widget.on].filter(Boolean).length;
+export const shortcutsOn = (s: State) => [s.scale.on, s.rotation.on, s.flash.on, s.night.on, s.play.on].filter(Boolean).length + s.widgets.length;
+
+export type WidgetButton = { id: string; name: string; app: string; button: string; slot: number; ok: boolean };
+
+async function then<T>(work: Promise<T>) {
+  await work;
+  await state.refresh();
+}
+export const installHelper = (packageName: string) => native("installHelper", { packageName });
+/** Opens the widget button setup: a new one without [id], else pick another button of that one. */
+export const pickWidget = (id?: string) => native("widgetPick", { id: id ?? "" });
+export const setWidgetSlot = (id: string, slot: number) => then(native("widgetSlot", { id, slot }));
+export const renameWidget = (id: string, name: string) => then(native("widgetName", { id, name }));
+export const removeWidget = (id: string) => then(native("widgetRemove", { id }));
+/** Finds the button without pressing it ([dry]), or presses it. */
+export const testWidget = (id: string, dry: boolean) => native("widgetTest", { id, dry });

@@ -26,7 +26,10 @@ import com.everyonesniche.titantools.light.LightService
 import com.everyonesniche.titantools.quick.NightMode
 import com.everyonesniche.titantools.quick.Shortcuts
 import com.everyonesniche.titantools.quick.Torch
+import com.everyonesniche.titantools.quick.HelperApps
 import com.everyonesniche.titantools.quick.WidgetButton
+import com.everyonesniche.titantools.quick.WidgetButtonActivity
+import com.everyonesniche.titantools.quick.WidgetList
 import com.everyonesniche.titantools.quick.WidgetSetupActivity
 import com.everyonesniche.titantools.rotate.Rotation
 import com.everyonesniche.titantools.scale.ScaleActivity
@@ -141,6 +144,27 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
             "requestShizuku" -> if (Shizuku.running() && !Shizuku.deniedForGood()) Shizuku.requestPermission() else open("shizukuApp")
             "open" -> open(data.getString("target"))
             "uninstall" -> uninstall(data.getString("packageName"))
+            "installHelper" -> HelperApps.install(activity, data.getString("packageName"))
+            "widgetSlot" -> {
+                WidgetButton.save(activity, WidgetList.assignSlot(WidgetButton.all(activity), data.getString("id"), data.getInt("slot")))
+                changed()
+            }
+            "widgetName" -> {
+                val list = WidgetButton.all(activity)
+                val name = data.getString("name").trim().take(60)
+                list.firstOrNull { it.id == data.getString("id") }?.let {
+                    if (name.isNotEmpty()) WidgetButton.save(activity, WidgetList.upsert(list, it.copy(name = name)))
+                }
+                changed()
+            }
+            "widgetRemove" -> {
+                WidgetButton.remove(activity, data.getString("id"))
+                changed()
+            }
+            "widgetPick" -> activity.startActivity(Intent(activity, WidgetSetupActivity::class.java)
+                .putExtra(WidgetSetupActivity.EXTRA_ENTRY, data.optString("id").ifEmpty { null }))
+            "widgetTest" -> activity.startActivity(Intent(activity, WidgetButtonActivity::class.java)
+                .putExtra(WidgetButtonActivity.EXTRA_ENTRY, data.getString("id")).putExtra(WidgetButtonActivity.EXTRA_DRY, data.optBoolean("dry", true)))
             else -> throw IllegalArgumentException("Unknown operation: $operation")
         }
     }
@@ -190,11 +214,7 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
             Prefs.SCALE_ON -> ScaleActivity.sync(activity)
             Prefs.ROTATION_ON -> Rotation.switched(activity, value as Boolean)
             Prefs.FLASH_ON, Prefs.PLAY_ON -> Shortcuts.sync(activity)
-            Prefs.WIDGET_ON -> {
-                Shortcuts.sync(activity)
-                // Turned on with no widget yet: pick one now.
-                if (value == true && WidgetButton.info(activity) == null) open("widgetSetup")
-            }
+            Prefs.WIDGET_ON -> Shortcuts.sync(activity)
             Prefs.NIGHT_ON -> {
                 Shortcuts.sync(activity)
                 if (value == false) NightMode.restoreSoon(activity)
@@ -216,7 +236,6 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
             "shortcutKeys" -> shortcutKeys()
             "scaleNow" -> Intent(activity, ScaleActivity::class.java)
             "widgetSetup" -> Intent(activity, WidgetSetupActivity::class.java)
-            "widgetNew" -> Intent(activity, WidgetSetupActivity::class.java).putExtra(WidgetSetupActivity.EXTRA_NEW, true)
             "titanKeysPage" -> Intent(Intent.ACTION_VIEW, Uri.parse("https://everyones-niche.com/titankeys/"))
             "titanKeysApp" -> activity.packageManager.getLaunchIntentForPackage(Installed.TITANKEYS)
                 ?: Intent(Intent.ACTION_VIEW, Uri.parse("https://everyones-niche.com/titankeys/"))
@@ -329,9 +348,14 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
                 .put("status", if (!prefs.getBoolean(Prefs.ROTATION_ON, false)) "Off" else shizukuPause ?: Rotation.label(activity)))
             .put("flash", JSONObject().put("on", prefs.getBoolean(Prefs.FLASH_ON, false)).put("lit", Torch.on))
             .put("play", JSONObject().put("on", prefs.getBoolean(Prefs.PLAY_ON, false)))
-            .put("widget", JSONObject().put("on", prefs.getBoolean(Prefs.WIDGET_ON, false))
-                .put("picked", WidgetButton.info(activity) != null)
-                .put("app", WidgetButton.appName(activity) ?: "").put("button", WidgetButton.buttonName(activity) ?: ""))
+            .put("widgets", JSONArray().apply {
+                for (e in WidgetButton.all(activity)) put(JSONObject().put("id", e.id).put("name", e.name).put("app", e.app)
+                    .put("button", e.button).put("slot", e.slot).put("ok", WidgetButton.info(activity, e) != null))
+            })
+            .put("helpers", JSONArray().apply {
+                for (h in HelperApps.all) put(JSONObject().put("packageName", h.packageName).put("label", h.label)
+                    .put("installed", HelperApps.installed(activity, h)))
+            })
             .put("night", JSONObject().put("on", prefs.getBoolean(Prefs.NIGHT_ON, false)).put("active", NightMode.active(activity))
                 .put("extraDim", prefs.getBoolean(Prefs.NIGHT_EXTRA_DIM, true)).put("dimLevel", NightMode.dimLevel(activity))
                 .put("darkTheme", prefs.getBoolean(Prefs.NIGHT_DARK_THEME, false)))
