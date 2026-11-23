@@ -85,7 +85,7 @@ object Prefs {
     /** The brightness, 1 to 255. A choice stored by an earlier build moves over: by its name, then to its number. */
     fun level(context: Context): Int {
         val prefs = of(context)
-        if (prefs.contains(LIGHT_LEVEL_VALUE)) return prefs.getInt(LIGHT_LEVEL_VALUE, DEFAULT_LEVEL).takeIf(LightLevels::valid) ?: DEFAULT_LEVEL
+        if (prefs.contains(LIGHT_LEVEL_VALUE)) return LightLevels.usable(prefs.getInt(LIGHT_LEVEL_VALUE, DEFAULT_LEVEL)) ?: DEFAULT_LEVEL
         val level = when {
             prefs.contains(LIGHT_LEVEL_NAME) -> LightLevels.fromName(prefs.getString(LIGHT_LEVEL_NAME, null))
             prefs.contains(LIGHT_LEVEL) -> LightLevels.fromOldLevel(prefs.getInt(LIGHT_LEVEL, 0))

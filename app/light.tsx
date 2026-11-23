@@ -15,7 +15,7 @@ const activities: { value: LightActivity; label: string }[] = [
   { value: "typing", label: "Typing" },
 ];
 
-const levels = [4, 8, 11, 16, 24, 32, 48, 64, 96, 128, 160, 200, 255];
+const levels = [11, 16, 24, 32, 48, 64, 96, 128, 160, 200, 255];
 const levelLabel = (level: number) => level === 4 ? "4, dimmest" : level === 255 ? "255, brightest" : String(level);
 const darkness = [1, 3, 5, 10, 20, 30, 50, 100];
 const halfHours = Array.from({ length: 48 }, (_, i) => i * 30);

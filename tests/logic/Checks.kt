@@ -214,7 +214,10 @@ private fun reused() {
 }
 
 private fun levels() {
-    check("the choices", LightLevels.CHOICES == listOf(4, 8, 11, 16, 24, 32, 48, 64, 96, 128, 160, 200, 255))
+    check("the choices", LightLevels.CHOICES == listOf(11, 16, 24, 32, 48, 64, 96, 128, 160, 200, 255))
+    check("11 is the dimmest that lights", LightLevels.valid(11) && !LightLevels.valid(8))
+    check("an old 4 or 8 becomes 11", LightLevels.usable(4) == 11 && LightLevels.usable(8) == 11 && LightLevels.usable(24) == 24)
+    check("no level outside 1-255", LightLevels.usable(0) == null && LightLevels.usable(300) == null)
     check("default is 64", LightLevels.DEFAULT == 64)
     check("old Low is 24", LightLevels.fromName("low") == 24)
     check("old Medium is 64", LightLevels.fromName("medium") == 64)
