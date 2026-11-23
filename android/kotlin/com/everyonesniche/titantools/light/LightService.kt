@@ -214,7 +214,11 @@ class LightService : Service(), SensorEventListener {
             try {
                 Shell.light(0)
                 // A write from the loop's last round can land just after: write 0 again a moment later.
-                worker.postDelayed({ if (!lit) try { Shell.light(0) } catch (ignored: Exception) {} }, 700)
+                // Not on the worker, whose queue is cleared as the service stops.
+                Thread {
+                    Thread.sleep(700)
+                    if (!lit) try { Shell.light(0) } catch (ignored: Exception) {}
+                }.start()
                 LightJournal.markOff(this)
             } catch (error: Exception) {
                 Log.w(TAG, "Couldn't turn the keyboard light off", error)
