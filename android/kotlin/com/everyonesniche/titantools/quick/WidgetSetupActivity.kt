@@ -118,7 +118,8 @@ class WidgetSetupActivity : Activity() {
         val info = manager.getAppWidgetInfo(id) ?: return message("Couldn't add that widget.")
         host.startListening()
         val width = resources.displayMetrics.widthPixels - dp(48f)
-        val height = maxOf(info.minHeight, dp(140f)).coerceAtMost(resources.displayMetrics.heightPixels / 2)
+        // Tall enough for the whole widget (1Valet's fob button sits below its name), at most 60% of the screen.
+        val height = maxOf(info.minHeight, dp(320f)).coerceAtMost(resources.displayMetrics.heightPixels * 3 / 5)
         val view = host.createView(applicationContext, id, info)
         hostView = view
         val frame = FrameLayout(this)
