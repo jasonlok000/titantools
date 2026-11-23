@@ -5,5 +5,6 @@ android {
     compileSdk = 36
     defaultConfig {
         minSdk = 34
+        consumerProguardFiles("proguard-rules.pro")
     }
 }

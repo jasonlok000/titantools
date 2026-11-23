@@ -18,7 +18,7 @@ export default defineTheme({
     light: { background: black, foreground: cream, muted, accent: orange },
   },
   text: { size: 45 },
-  spacing: { inset: 92, gap: 69, rowGap: 52 },
+  spacing: { inset: 92, gap: 69 },
   // Ink clips the first row's top edge at the scroll viewport.
   hitSlop: { top: 16, right: 18, bottom: 30, left: 18 },
   header: { layout: "large", size: 84, top: 21, bottom: 51, cutout: "below", back: { position: "end", icon: "arrow" }, iconSize: 60 },
