@@ -137,7 +137,8 @@ object Shizuku {
 
     /** Makes call [code] and returns its boolean answer (false for calls that answer nothing). */
     private fun call(code: Int, write: (Parcel) -> Unit): Boolean {
-        val binder = require()
+        // Attaching (18) comes before Shizuku counts as attached.
+        val binder = if (code == 18) server ?: throw RemoteException("Shizuku isn't running") else require()
         val input = Parcel.obtain()
         val output = Parcel.obtain()
         try {
