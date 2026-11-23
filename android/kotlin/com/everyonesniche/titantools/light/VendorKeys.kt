@@ -55,6 +55,18 @@ object VendorKeys {
         return writes
     }
 
+    /**
+     * A level someone set in the phone's own settings while Titan Tools owns the key light: the stored level isn't what Titan
+     * Tools last wrote. It's adopted as Titan Tools' brightness instead of being overwritten, so the two never take turns.
+     * Never 0, and never before Titan Tools has written a level itself. Null: nothing to adopt.
+     */
+    fun adopt(led: String?, lastWritten: String?): Int? {
+        if (lastWritten == null || !validLed(led)) return null
+        val level = led!!.trim().toInt()
+        if (level == 0 || led.trim() == lastWritten.trim()) return null
+        return level
+    }
+
     /** The writes that put the phone's own values back. */
     fun restoreWrites(saved: Saved, timeout: String?, led: String?): List<Write> {
         val writes = mutableListOf<Write>()

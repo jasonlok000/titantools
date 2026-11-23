@@ -55,6 +55,37 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- Rotation: the "Rotate" launcher entry (for the side button) and the Quick Settings tile, both there only while
+             the tool is on. -->
+        <activity
+            android:name="com.everyonesniche.titantools.rotate.RotateActivity"
+            android:label="Rotate"
+            android:icon="@mipmap/rotate_icon"
+            android:roundIcon="@mipmap/rotate_icon"
+            android:enabled="false"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity="com.everyonesniche.titantools.rotate"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:configChanges="density|fontScale|keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode|locale|layoutDirection">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <service
+            android:name="com.everyonesniche.titantools.rotate.RotationTile"
+            android:label="Rotation"
+            android:icon="@drawable/rotate_tile"
+            android:enabled="false"
+            android:exported="true"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
         <service
             android:name="com.everyonesniche.titantools.light.LightService"
             android:exported="false"

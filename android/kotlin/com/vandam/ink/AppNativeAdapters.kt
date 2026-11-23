@@ -13,6 +13,9 @@ import android.provider.Settings
 import android.util.DisplayMetrics
 import android.view.ViewTreeObserver
 import com.everyonesniche.titantools.core.Installed
+import com.everyonesniche.titantools.core.Link
+import com.everyonesniche.titantools.light.LightLevels
+import com.everyonesniche.titantools.light.LightRule
 import com.everyonesniche.titantools.core.OldApps
 import com.everyonesniche.titantools.core.Prefs
 import com.everyonesniche.titantools.core.Status
@@ -20,6 +23,7 @@ import com.everyonesniche.titantools.hold.HoldPause
 import com.everyonesniche.titantools.hold.HoldService
 import com.everyonesniche.titantools.light.LightRecovery
 import com.everyonesniche.titantools.light.LightService
+import com.everyonesniche.titantools.rotate.Rotation
 import com.everyonesniche.titantools.scale.ScaleActivity
 import com.everyonesniche.titantools.scale.ScaleSettings
 import com.everyonesniche.titantools.shizuku.Shizuku
@@ -64,6 +68,7 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
             // Back from Shizuku, Settings or an uninstall: look at everything again.
             Installed.forget()
             LightRecovery.checkSoon(activity)
+            Rotation.restoreSoon(activity)
             changed()
         }
     }
@@ -72,6 +77,7 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
         Shizuku.init(activity)
         stops += Shizuku.listen {
             LightRecovery.checkSoon(activity)
+            Rotation.restoreSoon(activity)
             changed()
         }
         stops += Status.listen { changed() }
@@ -81,7 +87,9 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
         activity.application.registerActivityLifecycleCallbacks(this)
         LightService.sync(activity)
         ScaleActivity.sync(activity)
+        Rotation.sync(activity)
         LightRecovery.checkSoon(activity)
+        Rotation.restoreSoon(activity)
     }
 
     override fun onActivityDestroyed(target: android.app.Activity) {
@@ -133,9 +141,11 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
     private fun set(key: String, value: Any) {
         val editor = Prefs.of(activity).edit()
         when (key) {
-            Prefs.LIGHT_ON, Prefs.SCALE_ON, Prefs.HOLD_ON, Prefs.HOLD_VIBRATE, Prefs.HOLD_PASSWORDS -> editor.putBoolean(key, value as Boolean)
-            Prefs.LIGHT_LEVEL -> editor.putString(Prefs.LIGHT_LEVEL_NAME, com.everyonesniche.titantools.light.LightLevels.name(value as String))
-                .remove(Prefs.LIGHT_LEVEL)
+            Prefs.LIGHT_ON, Prefs.SCALE_ON, Prefs.HOLD_ON, Prefs.ROTATION_ON, Prefs.HOLD_VIBRATE, Prefs.HOLD_PASSWORDS -> editor.putBoolean(key, value as Boolean)
+            Prefs.LIGHT_LEVEL -> editor.putInt(Prefs.LIGHT_LEVEL_VALUE, (value as Number).toInt().takeIf(LightLevels::valid) ?: LightLevels.DEFAULT)
+                .remove(Prefs.LIGHT_LEVEL).remove(Prefs.LIGHT_LEVEL_NAME)
+            Prefs.LIGHT_WHEN -> editor.putString(key, if (value == "typing") "typing" else "screen")
+            Prefs.LIGHT_STAY_SECONDS -> editor.putInt(key, (value as Number).toInt().takeIf { it in Prefs.STAY_SECONDS } ?: Prefs.DEFAULT_STAY_SECONDS)
             Prefs.LIGHT_DARK_LUX -> editor.putFloat(key, (value as Number).toFloat().takeIf { it in Prefs.DARK_LUX } ?: Prefs.DEFAULT_DARK_LUX)
             Prefs.HOLD_MILLIS -> editor.putInt(key, (value as Number).toInt().takeIf { it in Prefs.HOLD_TIMES } ?: Prefs.DEFAULT_HOLD_MILLIS)
             Prefs.PHONE_DPI, Prefs.TABLET_DPI -> {
@@ -150,8 +160,9 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
         }
         check(editor.commit()) { "Couldn't save that" }
         when (key) {
-            Prefs.LIGHT_ON, Prefs.LIGHT_LEVEL, Prefs.LIGHT_DARK_LUX -> LightService.sync(activity)
+            Prefs.LIGHT_ON, Prefs.LIGHT_LEVEL, Prefs.LIGHT_DARK_LUX, Prefs.LIGHT_WHEN, Prefs.LIGHT_STAY_SECONDS -> LightService.sync(activity)
             Prefs.SCALE_ON -> ScaleActivity.sync(activity)
+            Prefs.ROTATION_ON -> Rotation.switched(activity, value as Boolean)
         }
         changed()
     }
@@ -247,7 +258,9 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
             else -> HoldService.live?.pauseReason() ?: "On: hold a letter for its symbol"
         }
 
-        val levelName = Prefs.levelName(activity)
+        val level = Prefs.level(activity)
+        val link = Link.current(activity)
+        val now = System.currentTimeMillis()
         val old = JSONArray()
         for (app in Installed.oldApps(activity)) {
             old.put(JSONObject().put("packageName", app.packageName).put("name", app.name).put("tool", app.tool.id)
@@ -258,12 +271,16 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
             .put("shizuku", JSONObject().put("installed", installed).put("running", running).put("allowed", allowed)
                 .put("everAllowed", Shizuku.everAllowed(activity)))
             .put("light", JSONObject().put("on", lightOn).put("status", lightStatus).put("follows", lightOn && Status.lightFollows)
-                .put("level", levelName).put("darkLux", Prefs.darkLux(activity).toDouble()))
+                .put("level", level).put("levelChoice", LightLevels.nearest(level)).put("darkLux", Prefs.darkLux(activity).toDouble())
+                .put("when", if (Prefs.wantTyping(activity)) "typing" else "screen").put("staySeconds", Prefs.staySeconds(activity))
+                .put("linkSeen", link.seen).put("linkAlive", LightRule.alive(link, now)))
             .put("scale", JSONObject().put("on", scaleOn).put("status", scaleStatus)
                 .put("phoneDpi", prefs.getInt(Prefs.PHONE_DPI, 0)).put("tabletDpi", prefs.getInt(Prefs.TABLET_DPI, 0)))
             .put("hold", JSONObject().put("on", holdOn).put("status", holdStatus).put("accessibility", accessibility)
                 .put("millis", Prefs.holdMillis(activity)).put("vibrate", prefs.getBoolean(Prefs.HOLD_VIBRATE, true))
                 .put("passwords", prefs.getBoolean(Prefs.HOLD_PASSWORDS, false)))
+            .put("rotation", JSONObject().put("on", prefs.getBoolean(Prefs.ROTATION_ON, false))
+                .put("status", if (!prefs.getBoolean(Prefs.ROTATION_ON, false)) "Off" else shizukuPause ?: Rotation.label(activity)))
             .put("oldApps", old)
             .put("titanKeys", JSONObject().put("installed", Installed.has(activity, Installed.TITANKEYS))
                 .put("selected", HoldPause.pausedFor(defaultIme)))

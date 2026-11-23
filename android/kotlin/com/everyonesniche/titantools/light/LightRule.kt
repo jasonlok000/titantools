@@ -4,13 +4,14 @@ package com.everyonesniche.titantools.light
  * When the keyboard light is on. All times are wall-clock milliseconds (System.currentTimeMillis), the clock TitanKeys stamps
  * its link messages with.
  *
- * - The link is alive when TitanKeys sent a typing message in the last 10 minutes. Then the light follows TitanKeys: on while
- *   it's dark and you type, and for 5 seconds after TitanKeys says typing stopped.
- * - Without the link (another keyboard, or TitanKeys before 3.1): on while it's dark and the screen is on, as NightKeys did.
+ * - "Dark and screen on" (the default): on while it's dark and the screen is on, as NightKeys did.
+ * - "Dark and typing": follows TitanKeys over the link. On while it's dark and TitanKeys said typing within the last
+ *   [stayMillis] (counted from its last message, typing or not: any "typing" relights at once). The link is alive while
+ *   TitanKeys sent something in the last 10 minutes; when it goes quiet, the light falls back to "dark and screen on".
  */
 object LightRule {
     const val LINK_FRESH_MILLIS = 10 * 60_000L
-    const val HOLD_OVER_MILLIS = 5_000L
+    const val DEFAULT_STAY_MILLIS = 5_000L
 
     enum class Mode { FollowsTitanKeys, DarkAndScreenOn }
 
@@ -22,28 +23,32 @@ object LightRule {
             if (time < lastAt) return this
             return Link(time, typing, if (typing) 0 else time)
         }
+
+        /** TitanKeys has sent at least one message: it has the link (3.1 or later). */
+        val seen: Boolean get() = lastAt > 0
     }
 
     fun alive(link: Link, now: Long): Boolean = link.lastAt > 0 && now >= link.lastAt && now - link.lastAt < LINK_FRESH_MILLIS
 
-    fun mode(link: Link, now: Long): Mode = if (alive(link, now)) Mode.FollowsTitanKeys else Mode.DarkAndScreenOn
+    fun mode(wantTyping: Boolean, link: Link, now: Long): Mode =
+        if (wantTyping && alive(link, now)) Mode.FollowsTitanKeys else Mode.DarkAndScreenOn
 
-    /** Typing now, or stopped less than [HOLD_OVER_MILLIS] ago. */
-    fun typing(link: Link, now: Long): Boolean = link.typing || (link.stoppedAt > 0 && now - link.stoppedAt in 0 until HOLD_OVER_MILLIS)
+    /** TitanKeys said something less than [stayMillis] ago. */
+    fun typing(link: Link, now: Long, stayMillis: Long): Boolean = link.lastAt > 0 && now - link.lastAt in 0 until stayMillis
 
-    fun lit(dark: Boolean, screenOn: Boolean, link: Link, now: Long): Boolean {
+    fun lit(dark: Boolean, screenOn: Boolean, wantTyping: Boolean, link: Link, now: Long, stayMillis: Long = DEFAULT_STAY_MILLIS): Boolean {
         if (!dark || !screenOn) return false
-        return when (mode(link, now)) {
-            Mode.FollowsTitanKeys -> typing(link, now)
+        return when (mode(wantTyping, link, now)) {
+            Mode.FollowsTitanKeys -> typing(link, now, stayMillis)
             Mode.DarkAndScreenOn -> true
         }
     }
 
-    /** The next time the answer can change by itself (the hold-over ending or the link going stale), or -1 for none. */
-    fun nextChange(link: Link, now: Long): Long {
-        if (!alive(link, now)) return -1
-        val stale = link.lastAt + LINK_FRESH_MILLIS
-        val holdOver = if (!link.typing && link.stoppedAt > 0) link.stoppedAt + HOLD_OVER_MILLIS else -1
-        return if (holdOver > now) minOf(holdOver, stale) else stale
+    /** The next time the answer can change by itself (the stay ending or the link going quiet), or -1 for none. */
+    fun nextChange(wantTyping: Boolean, link: Link, now: Long, stayMillis: Long = DEFAULT_STAY_MILLIS): Long {
+        if (!wantTyping || !alive(link, now)) return -1
+        val quiet = link.lastAt + LINK_FRESH_MILLIS
+        val stay = link.lastAt + stayMillis
+        return if (stay > now) minOf(stay, quiet) else quiet
     }
 }

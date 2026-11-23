@@ -8,6 +8,7 @@ import com.everyonesniche.titantools.light.LightRule
 import com.everyonesniche.titantools.light.LightRule.Link
 import com.everyonesniche.titantools.light.VendorKeys
 import com.everyonesniche.titantools.light.VendorReply
+import com.everyonesniche.titantools.rotate.RotationRule
 import com.everyonesniche.titantools.scale.ScaleMath
 import com.everyonesniche.titantools.scale.ScaleSettings
 import com.everyonesniche.titantools.scale.WmOutput
@@ -23,27 +24,38 @@ private fun check(name: String, ok: Boolean) {
 private fun lightRule() {
     val now = 1_800_000_000_000L
     val none = Link()
-    check("no link: dark and screen on lights", LightRule.lit(true, true, none, now))
-    check("no link: bright stays off", !LightRule.lit(false, true, none, now))
-    check("no link: screen off stays off", !LightRule.lit(true, false, none, now))
-    check("no link: mode", LightRule.mode(none, now) == LightRule.Mode.DarkAndScreenOn)
+    // "Dark and screen on", the default.
+    check("screen: dark and screen on lights", LightRule.lit(true, true, false, none, now))
+    check("screen: bright stays off", !LightRule.lit(false, true, false, none, now))
+    check("screen: screen off stays off", !LightRule.lit(true, false, false, none, now))
+    check("screen: typing doesn't matter", LightRule.lit(true, true, false, none.after(false, now - 60_000, now), now))
+    check("screen: no next change", LightRule.nextChange(false, none.after(true, now, now), now) == -1L)
 
+    // "Dark and typing", over the link.
+    check("typing, no link yet: falls back to screen on", LightRule.lit(true, true, true, none, now))
+    check("typing, no link yet: mode", LightRule.mode(true, none, now) == LightRule.Mode.DarkAndScreenOn)
+    check("typing, no link: not seen", !none.seen)
     val typing = none.after(true, now - 1000, now)
-    check("typing: link alive", LightRule.alive(typing, now))
-    check("typing: follows TitanKeys", LightRule.mode(typing, now) == LightRule.Mode.FollowsTitanKeys)
-    check("typing in the dark lights", LightRule.lit(true, true, typing, now))
-    check("typing but bright stays off", !LightRule.lit(false, true, typing, now))
-    check("typing but screen off stays off", !LightRule.lit(true, false, typing, now))
-
+    check("typing: seen", typing.seen)
+    check("typing: follows TitanKeys", LightRule.mode(true, typing, now) == LightRule.Mode.FollowsTitanKeys)
+    check("typing in the dark lights", LightRule.lit(true, true, true, typing, now))
+    check("typing but bright stays off", !LightRule.lit(false, true, true, typing, now))
+    check("typing but screen off stays off", !LightRule.lit(true, false, true, typing, now))
+    check("typing: off after 5 s by default", !LightRule.lit(true, true, true, typing, now + 4_000))
+    check("typing: still on before 5 s", LightRule.lit(true, true, true, typing, now + 3_900))
+    check("typing: a 30 s stay keeps it on", LightRule.lit(true, true, true, typing, now + 20_000, 30_000))
     val stopped = typing.after(false, now, now)
-    check("hold-over: still lit 4.9 s after", LightRule.lit(true, true, stopped, now + 4_900))
-    check("hold-over: off at 5 s", !LightRule.lit(true, true, stopped, now + 5_000))
-    check("hold-over: next change at its end", LightRule.nextChange(stopped, now + 1000) == now + 5_000)
+    check("stopped: lit for the stay after it", LightRule.lit(true, true, true, stopped, now + 1_900, 2_000))
+    check("stopped: off after the stay", !LightRule.lit(true, true, true, stopped, now + 2_000, 2_000))
+    check("stopped: next change at the stay's end", LightRule.nextChange(true, stopped, now + 1000, 10_000) == now + 10_000)
+    val again = stopped.after(true, now + 20_000, now + 20_000)
+    check("typing again relights at once", LightRule.lit(true, true, true, again, now + 20_000, 2_000))
     check("link: alive at 9:59", LightRule.alive(stopped, now + 599_000))
-    check("link: stale at 10:00", !LightRule.alive(stopped, now + 600_000))
-    check("stale link: back to dark and screen on", LightRule.lit(true, true, stopped, now + 600_000))
-    check("stale link: no next change", LightRule.nextChange(stopped, now + 600_000) == -1L)
-    check("typing: next change is the link going stale", LightRule.nextChange(typing, now) == now - 1000 + LightRule.LINK_FRESH_MILLIS)
+    check("link: quiet at 10:00", !LightRule.alive(stopped, now + 600_000))
+    check("quiet link: back to dark and screen on", LightRule.lit(true, true, true, stopped, now + 600_000))
+    check("quiet link: mode", LightRule.mode(true, stopped, now + 600_000) == LightRule.Mode.DarkAndScreenOn)
+    check("quiet link: no next change", LightRule.nextChange(true, stopped, now + 600_000) == -1L)
+    check("after the stay: next change is the link going quiet", LightRule.nextChange(true, typing, now + 10_000) == now - 1000 + LightRule.LINK_FRESH_MILLIS)
 
     check("older message ignored", stopped.after(true, now - 5000, now + 10) == stopped)
     val future = none.after(true, now + 60_000, now)
@@ -51,6 +63,15 @@ private fun lightRule() {
     val zero = none.after(true, 0, now)
     check("a missing time counts as now", zero.lastAt == now && LightRule.alive(zero, now))
     check("a message from before a clock change isn't alive", !LightRule.alive(typing, now - 10_000))
+}
+
+private fun adoption() {
+    check("adopt: the phone's own 11 while Titan Tools wrote 24", VendorKeys.adopt("11", "24") == 11)
+    check("adopt: the phone's own 11 while Titan Tools wrote 0", VendorKeys.adopt("11", "0") == 11)
+    check("adopt: never 0", VendorKeys.adopt("0", "24") == null)
+    check("adopt: Titan Tools' own value isn't adopted", VendorKeys.adopt("24", "24") == null)
+    check("adopt: nothing written yet, nothing adopted", VendorKeys.adopt("100", null) == null)
+    check("adopt: missing or garbage, nothing", VendorKeys.adopt(VendorKeys.MISSING, "24") == null && VendorKeys.adopt("300", "24") == null)
 }
 
 private fun vendorKeys() {
@@ -155,19 +176,38 @@ private fun reused() {
 }
 
 private fun levels() {
-    check("low is 24", LightLevels.level("low") == 24)
-    check("medium is 64", LightLevels.level("medium") == 64)
-    check("high is 160", LightLevels.level("high") == 160)
-    check("default is medium", LightLevels.level(null) == 64 && LightLevels.name("bright") == "medium")
-    check("old low (8) stays low", LightLevels.nameFromOldLevel(8) == "low")
-    check("old medium (24) stays medium", LightLevels.nameFromOldLevel(24) == "medium")
-    check("old high (64) stays high", LightLevels.nameFromOldLevel(64) == "high")
-    check("unknown old level is medium", LightLevels.nameFromOldLevel(5) == "medium")
-    check("every level fits the firmware", LightLevels.LEVELS.values.all { it in 1..255 })
+    check("the choices", LightLevels.CHOICES == listOf(4, 8, 11, 16, 24, 32, 48, 64, 96, 128, 160, 200, 255))
+    check("default is 64", LightLevels.DEFAULT == 64)
+    check("old Low is 24", LightLevels.fromName("low") == 24)
+    check("old Medium is 64", LightLevels.fromName("medium") == 64)
+    check("old High is 160", LightLevels.fromName("high") == 160)
+    check("unknown name is the default", LightLevels.fromName("bright") == 64 && LightLevels.fromName(null) == 64)
+    check("first build's 8 is Low, 24", LightLevels.fromOldLevel(8) == 24)
+    check("first build's 24 is Medium, 64", LightLevels.fromOldLevel(24) == 64)
+    check("first build's 64 is High, 160", LightLevels.fromOldLevel(64) == 160)
+    check("an adopted 100 shows as 96", LightLevels.nearest(100) == 96)
+    check("a choice shows as itself", LightLevels.nearest(11) == 11)
+    check("every choice fits the firmware", LightLevels.CHOICES.all(LightLevels::valid) && !LightLevels.valid(0) && !LightLevels.valid(256))
+}
+
+private fun rotation() {
+    check("portrait flips to landscape", RotationRule.next(0) == 1)
+    check("landscape flips to portrait", RotationRule.next(1) == 0 && RotationRule.next(3) == 0)
+    check("upside down goes to portrait", RotationRule.next(2) == 0)
+    check("labels", RotationRule.label(0) == "Portrait" && RotationRule.label(1) == "Landscape" && RotationRule.label(3) == "Landscape")
+    val saved = RotationRule.Saved(autoRotate = 1, rotation = 0)
+    check("off: auto-rotate back on after a flip", RotationRule.restoreWrites(saved, 0, 1) ==
+        listOf("user_rotation" to 0, "accelerometer_rotation" to 1))
+    check("off: nothing changed, nothing written", RotationRule.restoreWrites(saved, 1, 0).isEmpty())
+    check("off: a locked phone stays locked", RotationRule.restoreWrites(RotationRule.Saved(0, 0), 0, 1) == listOf("user_rotation" to 0))
+    check("off: nothing saved, nothing written", RotationRule.restoreWrites(RotationRule.Saved(null, null), 0, 1).isEmpty())
+    check("off: a bad saved value is skipped", RotationRule.restoreWrites(RotationRule.Saved(5, 9), 0, 1).isEmpty())
 }
 
 fun main() {
+    rotation()
     levels()
+    adoption()
     lightRule()
     vendorKeys()
     vendorReplies()

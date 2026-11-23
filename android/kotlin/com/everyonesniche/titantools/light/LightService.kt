@@ -53,6 +53,9 @@ class LightService : Service(), SensorEventListener {
     private var level = Prefs.DEFAULT_LEVEL
     private var unsupported = false
     private var darkLux = Float.NaN
+    /** "Dark and typing" is picked, and how long the light stays on after TitanKeys' last message. */
+    private var wantTyping = false
+    private var stayMillis = LightRule.DEFAULT_STAY_MILLIS
     private var lastNotification = ""
     private var stopListening: List<() -> Unit> = emptyList()
 
@@ -98,6 +101,9 @@ class LightService : Service(), SensorEventListener {
         worker.post {
             val darkChanged = Prefs.darkLux(this) != darkLux
             val levelChanged = Prefs.level(this) != level
+            val whenChanged = Prefs.wantTyping(this) != wantTyping || Prefs.staySeconds(this) * 1000L != stayMillis
+            wantTyping = Prefs.wantTyping(this)
+            stayMillis = Prefs.staySeconds(this) * 1000L
             if (darkChanged) {
                 rebuildPolicy()
                 if (lit) setLit(false)
@@ -105,6 +111,8 @@ class LightService : Service(), SensorEventListener {
             } else if (levelChanged) {
                 level = Prefs.level(this)
                 if (lit) setLit(true)
+            } else if (whenChanged) {
+                evaluate()
             }
         }
         return START_STICKY
@@ -114,6 +122,8 @@ class LightService : Service(), SensorEventListener {
         val dark = Prefs.darkLux(this)
         darkLux = dark
         level = Prefs.level(this)
+        wantTyping = Prefs.wantTyping(this)
+        stayMillis = Prefs.staySeconds(this) * 1000L
         policy = LightPolicy(dark, Prefs.brightLux(dark), 0, 250).apply {
             setEnabled(true)
             setInteractive(screenIsOn())
@@ -165,7 +175,7 @@ class LightService : Service(), SensorEventListener {
         val now = System.currentTimeMillis()
         policy.tick(SystemClock.elapsedRealtime())
         val link = Link.current(this)
-        val mode = LightRule.mode(link, now)
+        val mode = LightRule.mode(wantTyping, link, now)
         val status: String
         var want = false
         when {
@@ -178,7 +188,7 @@ class LightService : Service(), SensorEventListener {
             else -> {
                 val dark = policy.shouldLight()
                 // Until the first reading, nothing changes: a restarted service doesn't blink a lit keyboard.
-                want = if (policy.reason() == LightPolicy.Reason.WAITING_FOR_SENSOR) lit else LightRule.lit(dark, screenOn, link, now)
+                want = if (policy.reason() == LightPolicy.Reason.WAITING_FOR_SENSOR) lit else LightRule.lit(dark, screenOn, wantTyping, link, now, stayMillis)
                 status = when {
                     want && mode == LightRule.Mode.FollowsTitanKeys -> "Lit: dark and typing"
                     want -> "Lit: dark and screen on"
@@ -193,17 +203,19 @@ class LightService : Service(), SensorEventListener {
         else if (ready && SystemClock.elapsedRealtime() - vendorCheckedAt > VENDOR_CHECK_MILLIS) {
             // In case the phone's own settings changed them: the firmware's key light settings, checked every minute.
             vendorCheckedAt = SystemClock.elapsedRealtime()
-            LightRecovery.own(this, lit, level)
+            level = LightRecovery.own(this, lit, level)
         }
         if (lit && screenOn && SystemClock.elapsedRealtime() - assertedAt >= ASSERT_MILLIS) {
-            // A safety net only: the firmware keeps the level itself now.
+            // A safety net only, as the firmware keeps the level itself. It also picks up a level set in the phone's own
+            // settings, which Titan Tools then uses instead of taking turns with it.
             assertedAt = SystemClock.elapsedRealtime()
+            if (ready) level = LightRecovery.own(this, true, level)
             try { Shell.light(level) } catch (error: Exception) { Log.w(TAG, "Couldn't write the light again", error) }
         }
         Status.light(if (want && !lit) "Paused: couldn't turn the light on" else status, mode == LightRule.Mode.FollowsTitanKeys)
         updateNotification(Status.lightText)
 
-        var next = LightRule.nextChange(link, now).let { if (it < 0) Long.MAX_VALUE else it - now }
+        var next = LightRule.nextChange(wantTyping, link, now, stayMillis).let { if (it < 0) Long.MAX_VALUE else it - now }
         val deadline = policy.nextDeadline()
         if (deadline >= 0) next = minOf(next, deadline - SystemClock.elapsedRealtime())
         if (lit) next = minOf(next, ASSERT_MILLIS)
@@ -222,7 +234,7 @@ class LightService : Service(), SensorEventListener {
         if (on) {
             try {
                 LightJournal.markLit(this)
-                LightRecovery.own(this, true, level)
+                level = LightRecovery.own(this, true, level)
                 if (!Shell.light(level)) {
                     // The firmware said no: this phone or firmware doesn't have the call. Never try to fight it.
                     unsupported = true
@@ -241,7 +253,7 @@ class LightService : Service(), SensorEventListener {
         } else {
             lit = false
             try {
-                LightRecovery.own(this, false, level)
+                level = LightRecovery.own(this, false, level)
                 Shell.light(0)
                 LightJournal.markOff(this)
             } catch (error: Exception) {

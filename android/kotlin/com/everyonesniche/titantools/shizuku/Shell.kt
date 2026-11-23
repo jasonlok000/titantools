@@ -44,6 +44,18 @@ object Shell {
         return readVendor(key) == value.trim()
     }
 
+    /** Rotation: locks the screen at [rotation] (0 portrait, 1 landscape, 2 and 3 upside down), turning auto-rotate off. */
+    fun lockRotation(rotation: Int) {
+        require(rotation in 0..3) { "Not a rotation" }
+        RemoteProcess.run(5_000, arrayOf("/system/bin/wm", "user-rotation", "lock", rotation.toString()))
+    }
+
+    /** Rotation, turned off: puts back the phone's own auto-rotate (0 or 1) or locked rotation (0 to 3). */
+    fun putRotationSetting(name: String, value: Int) {
+        require((name == "accelerometer_rotation" && value in 0..1) || (name == "user_rotation" && value in 0..3)) { "Not a rotation setting" }
+        RemoteProcess.run(5_000, arrayOf("/system/bin/settings", "put", "system", name, value.toString()))
+    }
+
     /** Scale Toggle's display commands: wm size, wm density, wm density <120–8192>, wm density reset. */
     fun wm(vararg args: String): String {
         val ok = (args.size == 1 && (args[0] == "size" || args[0] == "density")) ||

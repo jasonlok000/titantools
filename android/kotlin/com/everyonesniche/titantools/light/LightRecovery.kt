@@ -39,35 +39,50 @@ object LightRecovery {
 
     /**
      * Makes the firmware keep the light at [level] when [lit] and off otherwise: saves the phone's own values once, then sets
-     * the timeout to -1 and the stored level. True when the firmware's settings are as wanted (or it has none to set). Never
-     * while old NightKeys runs, which owns the timeout itself.
+     * the timeout to -1 and the stored level. A level someone set in the phone's own settings meanwhile is adopted as Titan
+     * Tools' brightness rather than overwritten (VendorKeys.adopt). Returns the level to use: [level], or the adopted one.
+     * Never while old NightKeys runs, which owns the timeout itself.
      */
     @Synchronized
-    fun own(context: Context, lit: Boolean, level: Int): Boolean {
-        if (Installed.oldRunning(context, OldApps.of(OldApps.Tool.Light))) return false
-        return try {
+    fun own(context: Context, lit: Boolean, level: Int): Int {
+        if (Installed.oldRunning(context, OldApps.of(OldApps.Tool.Light))) return level
+        var use = level
+        try {
             val timeout = Shell.readVendor(VendorKeys.TIMEOUT)
-            val led = Shell.readVendor(VendorKeys.LED)
+            var led = Shell.readVendor(VendorKeys.LED)
             val prefs = Prefs.of(context)
             if (!prefs.getBoolean(Prefs.VENDOR_SAVED, false)) {
                 val saved = VendorKeys.toSave(timeout, Shell.readVendor(VendorKeys.TIMEOUT_BACKUP), led)
                 // Saved before the first change, so a crash right after can still put them back.
-                check(prefs.edit().putBoolean(Prefs.VENDOR_SAVED, true)
+                check(prefs.edit().putBoolean(Prefs.VENDOR_SAVED, true).remove(Prefs.LED_WRITTEN)
                     .putString(Prefs.SAVED_TIMEOUT, saved.timeout).putString(Prefs.SAVED_LED, saved.led)
                     .putBoolean(Prefs.TIMEOUT_MIGRATED, true).commit()) { "Couldn't save the phone's key light settings" }
                 Log.i(TAG, "Saved the phone's key light settings: timeout ${saved.timeout}, level ${saved.led}")
+            } else {
+                // Builds before version code 5 didn't note what they wrote: then it was the level, or 0.
+                VendorKeys.adopt(led, prefs.getString(Prefs.LED_WRITTEN, null) ?: level.toString())?.let { adopted ->
+                    Log.i(TAG, "The phone's own key light level changed to $adopted: Titan Tools uses it too")
+                    Prefs.setLevel(context, adopted)
+                    prefs.edit().putString(Prefs.LED_WRITTEN, adopted.toString()).commit()
+                    use = adopted
+                    com.everyonesniche.titantools.core.Status.changed()
+                }
             }
-            var ok = true
-            for (write in VendorKeys.ownWrites(timeout, led, lit, level)) {
+            for (write in VendorKeys.ownWrites(timeout, led, lit, use)) {
                 val done = Shell.writeVendor(write.key, write.value)
                 Log.i(TAG, "${write.key} = ${write.value}: ${if (done) "done" else "didn't read back"}")
-                ok = ok && done
+                if (write.key == VendorKeys.LED && done) {
+                    led = write.value
+                    prefs.edit().putString(Prefs.LED_WRITTEN, write.value).commit()
+                }
             }
-            ok
+            // Already right, after a restart: still note it as Titan Tools' own value.
+            if (prefs.getString(Prefs.LED_WRITTEN, null) == null && VendorKeys.validLed(led) && led!!.trim() == (if (lit) use.toString() else "0"))
+                prefs.edit().putString(Prefs.LED_WRITTEN, led.trim()).commit()
         } catch (error: Exception) {
             Log.w(TAG, "Couldn't set the firmware's key light; the direct writes still work", error)
-            false
         }
+        return use
     }
 
     /**
@@ -88,7 +103,8 @@ object LightRecovery {
                     Log.i(TAG, "Put ${write.key} back to ${write.value}: ${if (done) "done" else "didn't read back"}")
                     ok = ok && done
                 }
-                if (ok) prefs.edit().putBoolean(Prefs.VENDOR_SAVED, false).remove(Prefs.SAVED_TIMEOUT).remove(Prefs.SAVED_LED).commit()
+                if (ok) prefs.edit().putBoolean(Prefs.VENDOR_SAVED, false).remove(Prefs.SAVED_TIMEOUT).remove(Prefs.SAVED_LED)
+                    .remove(Prefs.LED_WRITTEN).commit()
             } else if (!prefs.getBoolean(Prefs.TIMEOUT_MIGRATED, false)) {
                 VendorKeys.legacyRestore(timeout, Shell.readVendor(VendorKeys.TIMEOUT_BACKUP))?.let {
                     val done = Shell.writeVendor(VendorKeys.TIMEOUT, it)

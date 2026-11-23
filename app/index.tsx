@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Field, Screen, Section, Toggle, useSnapshot } from "ink";
-import { open, ready, set, shizukuStopped, state, uninstall } from "../lib/titantools";
+import { lightWhenLabel, open, ready, set, shizukuStopped, state, uninstall } from "../lib/titantools";
 import { Note } from "../lib/note";
 
 /** One card per tool: a switch with a plain status line, and its details behind one row. */
@@ -24,7 +24,7 @@ export default function Home() {
     <Section title="Keyboard light">
       <Toggle label="Light the keys in the dark" subtitle={s.light.status} value={s.light.on}
         onChange={on => void set("light_on", on)} />
-      <Field label="Turns on" href="/light">{s.light.follows ? "Follows TitanKeys" : "Dark and screen on"}</Field>
+      <Field label="Light when" href="/light">{lightWhenLabel(s.light)}</Field>
     </Section>
 
     <Section title="Scale Toggle">
@@ -39,6 +39,12 @@ export default function Home() {
       {s.hold.on && !s.hold.accessibility && !s.titanKeys.selected &&
         <Field label="Turn on in Accessibility" href="/hold">To do</Field>}
       <Field label="Hold time and more" href="/hold">{""}</Field>
+    </Section>
+
+    <Section title="Rotation">
+      <Toggle label="Flip portrait and landscape" subtitle={s.rotation.status} value={s.rotation.on}
+        onChange={on => void set("rotation_on", on)} />
+      <Field label="Tile and side button" href="/rotation">{""}</Field>
     </Section>
 
     {s.oldApps.length > 0 && <Section title="Remove the old apps">
