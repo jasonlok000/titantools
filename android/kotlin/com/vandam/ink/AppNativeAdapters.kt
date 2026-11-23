@@ -134,7 +134,8 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
         val editor = Prefs.of(activity).edit()
         when (key) {
             Prefs.LIGHT_ON, Prefs.SCALE_ON, Prefs.HOLD_ON, Prefs.HOLD_VIBRATE, Prefs.HOLD_PASSWORDS -> editor.putBoolean(key, value as Boolean)
-            Prefs.LIGHT_LEVEL -> editor.putInt(key, Prefs.LEVELS[value as String] ?: Prefs.DEFAULT_LEVEL)
+            Prefs.LIGHT_LEVEL -> editor.putString(Prefs.LIGHT_LEVEL_NAME, com.everyonesniche.titantools.light.LightLevels.name(value as String))
+                .remove(Prefs.LIGHT_LEVEL)
             Prefs.LIGHT_DARK_LUX -> editor.putFloat(key, (value as Number).toFloat().takeIf { it in Prefs.DARK_LUX } ?: Prefs.DEFAULT_DARK_LUX)
             Prefs.HOLD_MILLIS -> editor.putInt(key, (value as Number).toInt().takeIf { it in Prefs.HOLD_TIMES } ?: Prefs.DEFAULT_HOLD_MILLIS)
             Prefs.PHONE_DPI, Prefs.TABLET_DPI -> {
@@ -246,7 +247,7 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
             else -> HoldService.live?.pauseReason() ?: "On: hold a letter for its symbol"
         }
 
-        val levelName = Prefs.LEVELS.entries.firstOrNull { it.value == Prefs.level(activity) }?.key ?: "medium"
+        val levelName = Prefs.levelName(activity)
         val old = JSONArray()
         for (app in Installed.oldApps(activity)) {
             old.put(JSONObject().put("packageName", app.packageName).put("name", app.name).put("tool", app.tool.id)

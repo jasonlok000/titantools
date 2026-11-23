@@ -2,6 +2,7 @@ import com.everyonesniche.titantools.core.OldApps
 import com.everyonesniche.titantools.hold.HoldEngine
 import com.everyonesniche.titantools.hold.HoldPause
 import com.everyonesniche.titantools.hold.SymbolMap
+import com.everyonesniche.titantools.light.LightLevels
 import com.everyonesniche.titantools.light.LightPolicy
 import com.everyonesniche.titantools.light.LightRule
 import com.everyonesniche.titantools.light.LightRule.Link
@@ -146,7 +147,20 @@ private fun reused() {
     check("policy: bright turns off after 250 ms", !policy.shouldLight())
 }
 
+private fun levels() {
+    check("low is 24", LightLevels.level("low") == 24)
+    check("medium is 64", LightLevels.level("medium") == 64)
+    check("high is 160", LightLevels.level("high") == 160)
+    check("default is medium", LightLevels.level(null) == 64 && LightLevels.name("bright") == "medium")
+    check("old low (8) stays low", LightLevels.nameFromOldLevel(8) == "low")
+    check("old medium (24) stays medium", LightLevels.nameFromOldLevel(24) == "medium")
+    check("old high (64) stays high", LightLevels.nameFromOldLevel(64) == "high")
+    check("unknown old level is medium", LightLevels.nameFromOldLevel(5) == "medium")
+    check("every level fits the firmware", LightLevels.LEVELS.values.all { it in 1..255 })
+}
+
 fun main() {
+    levels()
     lightRule()
     migration()
     vendorReplies()
