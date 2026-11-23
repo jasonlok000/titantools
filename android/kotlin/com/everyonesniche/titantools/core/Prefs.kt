@@ -19,8 +19,10 @@ object Prefs {
     const val PHONE_DPI = "phone_dpi"
     const val TABLET_DPI = "tablet_dpi"
     const val TIMEOUT_MIGRATED = "timeout_migrated"
-    /** Titan Tools set keyboard_brightness_timeout to 0 and puts the backup back when the light tool goes off. */
-    const val TIMEOUT_OWNED = "timeout_owned"
+    /** The phone's own key light settings are saved, and Titan Tools owns them until the light tool is off (VendorKeys). */
+    const val VENDOR_SAVED = "vendor_saved"
+    const val SAVED_TIMEOUT = "saved_timeout"
+    const val SAVED_LED = "saved_led"
 
     const val DEFAULT_LEVEL = 64
     /** Below this many lux it counts as dark (NightKeys' default). It counts as bright again above max(+3, ×1.5). */

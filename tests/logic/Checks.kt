@@ -6,7 +6,7 @@ import com.everyonesniche.titantools.light.LightLevels
 import com.everyonesniche.titantools.light.LightPolicy
 import com.everyonesniche.titantools.light.LightRule
 import com.everyonesniche.titantools.light.LightRule.Link
-import com.everyonesniche.titantools.light.TimeoutMigration
+import com.everyonesniche.titantools.light.VendorKeys
 import com.everyonesniche.titantools.light.VendorReply
 import com.everyonesniche.titantools.scale.ScaleMath
 import com.everyonesniche.titantools.scale.ScaleSettings
@@ -53,30 +53,37 @@ private fun lightRule() {
     check("a message from before a clock change isn't alive", !LightRule.alive(typing, now - 10_000))
 }
 
-private fun migration() {
-    check("missing timeout: nothing", TimeoutMigration.restoreValue(TimeoutMigration.MISSING, "-1") == null)
-    check("missing backup: nothing", TimeoutMigration.restoreValue("0", TimeoutMigration.MISSING) == null)
-    check("unreadable: nothing", TimeoutMigration.restoreValue(null, "-1") == null)
-    check("same: nothing", TimeoutMigration.restoreValue("30000", "30000") == null)
-    check("changed by NightKeys to 0: backup back", TimeoutMigration.restoreValue("0", "-1") == "-1")
-    check("left continuous: backup back", TimeoutMigration.restoreValue("2147483647", "10000") == "10000")
-    check("garbage backup: nothing", TimeoutMigration.restoreValue("0", "abc") == null)
-    check("out of range backup: nothing", TimeoutMigration.restoreValue("0", "-5") == null)
-    check("too big backup: nothing", TimeoutMigration.restoreValue("0", "4294967296") == null)
-
-    // While the tool is on, Titan Tools owns the light: timeout 0, the phone's value saved as the backup if there's none.
-    val take = TimeoutMigration::takeWrites
-    check("take: backup kept, timeout to 0", take("-1", "-1") == listOf(TimeoutMigration.Write(false, "0")))
-    check("take: no backup, saved first", take("30000", TimeoutMigration.MISSING) ==
-        listOf(TimeoutMigration.Write(true, "30000"), TimeoutMigration.Write(false, "0")))
-    check("take: unusable backup, saved first", take("-1", "abc") ==
-        listOf(TimeoutMigration.Write(true, "-1"), TimeoutMigration.Write(false, "0")))
-    check("take: already 0, nothing", take("0", "-1").isEmpty())
-    check("take: already 0 and no backup, nothing (never saves 0)", take("0", TimeoutMigration.MISSING).isEmpty())
-    check("take: missing timeout never blocks", take(TimeoutMigration.MISSING, "-1").isEmpty())
-    check("take: unreadable timeout never blocks", take(null, null).isEmpty())
-    check("release: owned 0 goes back to -1", TimeoutMigration.restoreValue("0", "-1") == "-1")
-    check("release after take: back to the saved value", TimeoutMigration.restoreValue("0", "30000") == "30000")
+private fun vendorKeys() {
+    val W = VendorKeys::Write
+    val T = VendorKeys.TIMEOUT
+    val L = VendorKeys.LED
+    val M = VendorKeys.MISSING
+    // Saving the phone's own values: the timeout from the firmware's backup when usable, else the timeout itself.
+    check("save: owner's phone", VendorKeys.toSave("0", "-1", "100") == VendorKeys.Saved("-1", "100"))
+    check("save: no usable backup, the timeout", VendorKeys.toSave("30000", M, "100") == VendorKeys.Saved("30000", "100"))
+    check("save: missing keys are null", VendorKeys.toSave(M, M, M) == VendorKeys.Saved(null, null))
+    check("save: garbage is null", VendorKeys.toSave("x", "y", "300") == VendorKeys.Saved(null, null))
+    // Owning: timeout -1, the stored level = ours when lit, 0 when not.
+    check("own, lit", VendorKeys.ownWrites("0", "100", true, 64) == listOf(W(T, "-1"), W(L, "64")))
+    check("own, off", VendorKeys.ownWrites("-1", "64", false, 64) == listOf(W(L, "0")))
+    check("own: already right, nothing", VendorKeys.ownWrites("-1", "24", true, 24).isEmpty())
+    check("own: missing keys never block", VendorKeys.ownWrites(M, M, true, 24).isEmpty())
+    check("own: unreadable keys never block", VendorKeys.ownWrites(null, null, false, 24).isEmpty())
+    check("own: a missing level still sets the timeout", VendorKeys.ownWrites("0", M, true, 24) == listOf(W(T, "-1")))
+    // Giving back.
+    val saved = VendorKeys.Saved("-1", "100")
+    check("restore: both back", VendorKeys.restoreWrites(VendorKeys.Saved("30000", "100"), "-1", "0") == listOf(W(T, "30000"), W(L, "100")))
+    check("restore: owner's phone, only the level", VendorKeys.restoreWrites(saved, "-1", "64") == listOf(W(L, "100")))
+    check("restore: nothing saved for a key, left alone", VendorKeys.restoreWrites(VendorKeys.Saved(null, null), "-1", "64").isEmpty())
+    check("restore: missing now, left alone", VendorKeys.restoreWrites(saved, M, M).isEmpty())
+    // Old NightKeys' leftover timeout, before Titan Tools ever owned the keys.
+    check("legacy: missing timeout, nothing", VendorKeys.legacyRestore(M, "-1") == null)
+    check("legacy: missing backup, nothing", VendorKeys.legacyRestore("0", M) == null)
+    check("legacy: same, nothing", VendorKeys.legacyRestore("30000", "30000") == null)
+    check("legacy: changed by NightKeys to 0, backup back", VendorKeys.legacyRestore("0", "-1") == "-1")
+    check("legacy: left continuous, backup back", VendorKeys.legacyRestore("2147483647", "10000") == "10000")
+    check("legacy: out of range backup, nothing", VendorKeys.legacyRestore("0", "-5") == null)
+    check("valid levels", VendorKeys.validLed("0") && VendorKeys.validLed("255") && !VendorKeys.validLed("256") && !VendorKeys.validLed("-1"))
 }
 
 private fun vendorReplies() {
@@ -162,7 +169,7 @@ private fun levels() {
 fun main() {
     levels()
     lightRule()
-    migration()
+    vendorKeys()
     vendorReplies()
     holdPause()
     oldApps()

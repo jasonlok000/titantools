@@ -27,14 +27,13 @@ import com.everyonesniche.titantools.core.Link
 import com.everyonesniche.titantools.core.OldApps
 import com.everyonesniche.titantools.core.Prefs
 import com.everyonesniche.titantools.core.Status
-import com.everyonesniche.titantools.shizuku.RemoteProcess
 import com.everyonesniche.titantools.shizuku.Shell
 import com.everyonesniche.titantools.shizuku.Shizuku
 
 /**
  * The keyboard light. Runs while its switch is on. It reads the light sensor (NightKeys' LightPolicy and thresholds), the
- * screen and the link with TitanKeys, decides with [LightRule], and sets the firmware's light level directly. It never touches
- * keyboard_brightness_timeout. The light goes to 0 when it's bright, the screen goes off, the switch goes off, this service
+ * screen and the link with TitanKeys, decides with [LightRule], and sets the firmware's own stored level and timeout so its
+ * key presses keep that level (VendorKeys), with one direct write at each change. The light goes to 0 when it's bright, the screen goes off, the switch goes off, this service
  * stops, and after a crash ([LightJournal]).
  *
  * Everything runs on one worker thread; the screen going off jumps to the front of its queue.
@@ -48,11 +47,11 @@ class LightService : Service(), SensorEventListener {
     private var policy: LightPolicy? = null
     private var screenOn = false
     private var lit = false
-    private var loop: RemoteProcess? = null
-    private var loopStarted = 0L
+    /** When the firmware's settings were last checked, and when the lit level was last written straight to the light. */
+    private var vendorCheckedAt = 0L
+    private var assertedAt = 0L
     private var level = Prefs.DEFAULT_LEVEL
     private var unsupported = false
-    private var timeoutCheckedAt = 0L
     private var lastNotification = ""
     private var stopListening: List<() -> Unit> = emptyList()
 
@@ -157,12 +156,6 @@ class LightService : Service(), SensorEventListener {
         val mode = LightRule.mode(link, now)
         val status: String
         var want = false
-        // Owns the key light, screen on or off: checked as the service starts and every minute, in case the phone's settings
-        // changed it (LightRecovery.takeTimeout).
-        if (Shizuku.allowed() && (timeoutCheckedAt == 0L || SystemClock.elapsedRealtime() - timeoutCheckedAt > 60_000)) {
-            timeoutCheckedAt = SystemClock.elapsedRealtime()
-            LightRecovery.takeTimeout(this)
-        }
         when {
             light == null -> status = "Paused: this phone has no light sensor"
             !Shizuku.running() -> status = if (Shizuku.installed(this)) "Paused: start Shizuku" else "Paused: Shizuku isn't installed"
@@ -182,71 +175,66 @@ class LightService : Service(), SensorEventListener {
                 }
             }
         }
+        val ready = Shizuku.allowed() && !Installed.blocked(this, OldApps.Tool.Light)
         if (want != lit) setLit(want)
-        else if (lit) keepLoop()
+        else if (ready && SystemClock.elapsedRealtime() - vendorCheckedAt > VENDOR_CHECK_MILLIS) {
+            // In case the phone's own settings changed them: the firmware's key light settings, checked every minute.
+            vendorCheckedAt = SystemClock.elapsedRealtime()
+            LightRecovery.own(this, lit, level)
+        }
+        if (lit && screenOn && SystemClock.elapsedRealtime() - assertedAt >= ASSERT_MILLIS) {
+            // A safety net only: the firmware keeps the level itself now.
+            assertedAt = SystemClock.elapsedRealtime()
+            try { Shell.light(level) } catch (error: Exception) { Log.w(TAG, "Couldn't write the light again", error) }
+        }
         Status.light(if (want && !lit) "Paused: couldn't turn the light on" else status, mode == LightRule.Mode.FollowsTitanKeys)
         updateNotification(Status.lightText)
 
         var next = LightRule.nextChange(link, now).let { if (it < 0) Long.MAX_VALUE else it - now }
         val deadline = policy.nextDeadline()
         if (deadline >= 0) next = minOf(next, deadline - SystemClock.elapsedRealtime())
-        if (lit) next = minOf(next, LOOP_CHECK_MILLIS)
+        if (lit) next = minOf(next, ASSERT_MILLIS)
+        else if (ready) next = minOf(next, VENDOR_CHECK_MILLIS)
         // While paused for Shizuku or NightKeys, look again now and then.
         if (status.startsWith("Paused")) next = minOf(next, 30_000L)
         if (next != Long.MAX_VALUE) worker.postDelayed(evaluate, next.coerceAtLeast(1))
     }
 
+    /**
+     * Turns the light on at [level] or off: the firmware's own settings first (VendorKeys: its stored level, which it writes on
+     * every key press, and timeout -1), then one direct write so it changes at once.
+     */
     private fun setLit(on: Boolean) {
+        vendorCheckedAt = SystemClock.elapsedRealtime()
         if (on) {
             try {
                 LightJournal.markLit(this)
+                LightRecovery.own(this, true, level)
                 if (!Shell.light(level)) {
                     // The firmware said no: this phone or firmware doesn't have the call. Never try to fight it.
                     unsupported = true
+                    LightRecovery.own(this, false, level)
                     Shell.light(0)
                     LightJournal.markOff(this)
                     return
                 }
                 lit = true
-                startLoop()
+                assertedAt = SystemClock.elapsedRealtime()
             } catch (error: Exception) {
                 Log.w(TAG, "Couldn't light the keyboard", error)
                 lit = true
                 setLit(false)
             }
         } else {
-            stopLoop()
             lit = false
             try {
+                LightRecovery.own(this, false, level)
                 Shell.light(0)
-                // A write from the loop's last round can land just after: write 0 again a moment later.
-                // Not on the worker, whose queue is cleared as the service stops.
-                Thread {
-                    Thread.sleep(700)
-                    if (!lit) try { Shell.light(0) } catch (ignored: Exception) {}
-                }.start()
                 LightJournal.markOff(this)
             } catch (error: Exception) {
                 Log.w(TAG, "Couldn't turn the keyboard light off", error)
             }
         }
-    }
-
-    private fun startLoop() {
-        stopLoop()
-        loop = try { Shell.keepLit(level) } catch (error: Exception) { Log.w(TAG, "No keep-lit loop", error); null }
-        loopStarted = SystemClock.elapsedRealtime()
-    }
-
-    /** Starts a fresh loop before the running one ends by itself, or if it died. */
-    private fun keepLoop() {
-        val running = loop
-        if (running == null || SystemClock.elapsedRealtime() - loopStarted > Shell.LOOP_MILLIS - 15_000 || !running.alive()) startLoop()
-    }
-
-    private fun stopLoop() {
-        loop?.destroy()
-        loop = null
     }
 
     private fun shutDown() {
@@ -256,8 +244,8 @@ class LightService : Service(), SensorEventListener {
             lit = true
             setLit(false)
         }
-        // The tool is off: the firmware gets its own key light back.
-        LightRecovery.releaseTimeout(this)
+        // The tool is off: the phone's own key light settings go back, and the firmware is in charge again.
+        LightRecovery.release(this)
         Status.light("Off", false)
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
@@ -317,7 +305,8 @@ class LightService : Service(), SensorEventListener {
             private set
         private const val CHANNEL = "keyboard_light"
         private const val NOTIFICATION = 7
-        private const val LOOP_CHECK_MILLIS = 10_000L
+        private const val ASSERT_MILLIS = 5_000L
+        private const val VENDOR_CHECK_MILLIS = 60_000L
         private const val TAG = "TitanTools"
 
         /** Starts, refreshes or stops the service to match the switch. */

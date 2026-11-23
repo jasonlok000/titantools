@@ -23,7 +23,7 @@ export default function Light() {
       <Note>{light.follows
         ? "Following TitanKeys: in the dark, the light comes on while you type and goes off 5 seconds after."
         : "In the dark, the light stays on while the screen is on. With TitanKeys 3.1 or later as your keyboard, it follows your typing instead."}</Note>
-      <Note>Titan Tools turns off the phone's own key light while this is on.</Note>
+      <Note>While this is on, Titan Tools runs the phone's own key light. Its settings go back when you turn this off.</Note>
     </Section>
     <Section title="Brightness">
       <SettingsChoices<Level> value={light.level} options={levels} onChange={value => void set("light_level", value)} />
