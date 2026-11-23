@@ -81,7 +81,7 @@ object Shizuku {
                 val bundle = if (data.readInt() != 0) Bundle.CREATOR.createFromParcel(data) else null
                 if (bundle != null) {
                     attached = bundle.getInt("shizuku:attach-reply-version", -1) >= 13
-                    if (!attached) Log.w(TAG, "Shizuku is older than version 13")
+                    Log.i(TAG, if (attached) "Shizuku attached" else "Shizuku is older than version 13")
                     changed()
                 }
                 return true
@@ -103,6 +103,7 @@ object Shizuku {
         if (server?.pingBinder() == true && attached && server === binder) return
         server = binder
         attached = false
+        Log.i(TAG, "Shizuku binder received")
         try {
             binder.linkToDeath({
                 attached = false
