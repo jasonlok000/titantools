@@ -40,6 +40,10 @@
         <package android:name="com.everyonesniche.titantools.widget4" />
         <package android:name="com.everyonesniche.titantools.widget5" />
         <package android:name="com.android.vending" />
+        <!-- Widget buttons: every app with a widget, so its widget can draw here (without this, 1Valet's couldn't). -->
+        <intent>
+            <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+        </intent>
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="https" />
