@@ -14,6 +14,9 @@
     <uses-permission android:name="com.everyonesniche.titantools.permission.TRIGGER" />
     <!-- Installs the helper apps that come inside Titan Tools, when asked. Android asks first. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Widget buttons host any app's widget, which draws with that app's own resources: Titan Tools must see the app.
+         Matching widget apps by intent wasn't enough on Android 16. -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
     <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
