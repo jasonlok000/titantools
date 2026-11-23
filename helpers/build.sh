@@ -55,6 +55,7 @@ rotate|TT - Rotate|rotate|0|rotate_foreground
 flashlight|TT - Flashlight|flashlight|0|flashlight_foreground
 night|TT - Night mode|night|0|night_foreground
 playpause|TT - Play/Pause|playpause|0|play_foreground
+kill|TT - Kill app|kill|0|kill_foreground
 widget1|TT - Widget 1|widget|1|widget_foreground
 widget2|TT - Widget 2|widget|2|widget_foreground
 widget3|TT - Widget 3|widget|3|widget_foreground

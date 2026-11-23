@@ -61,6 +61,16 @@ object Shell {
         RemoteProcess.run(5_000, arrayOf("/system/bin/cmd", "uimode", "night", if (on) "yes" else "no"))
     }
 
+    /** Kill app: the activity history, top first (only its "Hist" lines, so the output stays small). */
+    fun activityHistory(): String = RemoteProcess.run(6_000,
+        arrayOf("/system/bin/sh", "-c", "/system/bin/dumpsys activity activities | /system/bin/grep -E 'Hist +#[0-9]+: ActivityRecord'")).out
+
+    /** Kill app: closes [packageName] completely. Checked against KillRule first; only a valid package name goes in. */
+    fun forceStop(packageName: String) {
+        require(com.everyonesniche.titantools.quick.KillRule.valid(packageName)) { "Not a package" }
+        RemoteProcess.run(6_000, arrayOf("/system/bin/am", "force-stop", packageName))
+    }
+
     /** Rotation: locks the screen at [rotation] (0 portrait, 1 landscape, 2 and 3 upside down), turning auto-rotate off. */
     fun lockRotation(rotation: Int) {
         require(rotation in 0..3) { "Not a rotation" }

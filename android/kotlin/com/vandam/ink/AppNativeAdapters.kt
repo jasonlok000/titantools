@@ -172,7 +172,7 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
     private fun set(key: String, value: Any) {
         val editor = Prefs.of(activity).edit()
         when (key) {
-            Prefs.LIGHT_ON, Prefs.SCALE_ON, Prefs.HOLD_ON, Prefs.ROTATION_ON, Prefs.FLASH_ON, Prefs.NIGHT_ON, Prefs.PLAY_ON, Prefs.WIDGET_ON,
+            Prefs.LIGHT_ON, Prefs.SCALE_ON, Prefs.HOLD_ON, Prefs.ROTATION_ON, Prefs.FLASH_ON, Prefs.NIGHT_ON, Prefs.PLAY_ON, Prefs.WIDGET_ON, Prefs.KILL_ON,
             Prefs.HOLD_VIBRATE, Prefs.HOLD_PASSWORDS, Prefs.NIGHT_EXTRA_DIM, Prefs.NIGHT_DARK_THEME -> editor.putBoolean(key, value as Boolean)
             // Editing a list makes the light's rule Custom.
             Prefs.LIGHT_DARK_ROOM, Prefs.LIGHT_NIGHT_HOURS, Prefs.LIGHT_DARK_THEME, Prefs.LIGHT_ANY_TIME ->
@@ -348,6 +348,7 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
                 .put("status", if (!prefs.getBoolean(Prefs.ROTATION_ON, false)) "Off" else shizukuPause ?: Rotation.label(activity)))
             .put("flash", JSONObject().put("on", prefs.getBoolean(Prefs.FLASH_ON, false)).put("lit", Torch.on))
             .put("play", JSONObject().put("on", prefs.getBoolean(Prefs.PLAY_ON, false)))
+            .put("kill", JSONObject().put("on", prefs.getBoolean(Prefs.KILL_ON, false)))
             .put("widgets", JSONArray().apply {
                 for (e in WidgetButton.all(activity)) put(JSONObject().put("id", e.id).put("name", e.name).put("app", e.app)
                     .put("button", e.button).put("slot", e.slot).put("ok", WidgetButton.info(activity, e) != null))

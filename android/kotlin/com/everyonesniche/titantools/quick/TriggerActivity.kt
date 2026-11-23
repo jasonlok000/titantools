@@ -27,7 +27,7 @@ class TriggerActivity : Activity() {
 
         /** The one-press actions, by the names the helper apps and shortcuts use, and their labels. */
         val ACTIONS = linkedMapOf("layout" to "Switch layout", "rotate" to "Rotate", "flashlight" to "Flashlight",
-            "night" to "Night mode", "playpause" to "Play/Pause")
+            "night" to "Night mode", "playpause" to "Play/Pause", "kill" to "Kill app")
 
         fun target(context: Context, intent: Intent): Intent? = when (intent.getStringExtra(EXTRA_ACTION)) {
             "layout" -> Intent(context, ScaleActivity::class.java)
@@ -35,6 +35,7 @@ class TriggerActivity : Activity() {
             "flashlight" -> Intent(context, FlashlightActivity::class.java)
             "night" -> Intent(context, NightModeActivity::class.java)
             "playpause" -> Intent(context, PlayPauseActivity::class.java)
+            "kill" -> Intent(context, KillActivity::class.java)
             "widget" -> Intent(context, WidgetButtonActivity::class.java)
                 .putExtra(WidgetButtonActivity.EXTRA_SLOT, intent.getIntExtra(EXTRA_SLOT, 0))
                 .putExtra(WidgetButtonActivity.EXTRA_ENTRY, intent.getStringExtra(EXTRA_ENTRY))

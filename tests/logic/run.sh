@@ -10,5 +10,5 @@ KOTLINC="${KOTLIN_HOME:-$HOME/build/kotlin-2.1.20/kotlinc}/bin/kotlinc"
 javac --release 17 -d "$work" $src/scale/ScaleMath.java $src/scale/ScaleSettings.java $src/scale/WmOutput.java \
   $src/scale/ScaleController.java $src/hold/HoldEngine.java $src/hold/SymbolMap.java $src/light/LightPolicy.java
 "$KOTLINC" -nowarn -cp "$work" -include-runtime -d "$work/checks.jar" $src/light/LightRule.kt $src/light/VendorKeys.kt \
-  $src/light/VendorReply.kt $src/light/LightLevels.kt $src/hold/HoldPause.kt $src/core/OldApps.kt $src/rotate/RotationRule.kt $src/quick/NightRule.kt $src/quick/WidgetList.kt tests/logic/Checks.kt 2>&1 | grep -v '^warning' || true
+  $src/light/VendorReply.kt $src/light/LightLevels.kt $src/hold/HoldPause.kt $src/core/OldApps.kt $src/rotate/RotationRule.kt $src/quick/NightRule.kt $src/quick/WidgetList.kt $src/quick/KillRule.kt tests/logic/Checks.kt 2>&1 | grep -v '^warning' || true
 java -cp "$work/checks.jar:$work" ChecksKt

@@ -37,6 +37,7 @@
         <package android:name="com.everyonesniche.titantools.flashlight" />
         <package android:name="com.everyonesniche.titantools.night" />
         <package android:name="com.everyonesniche.titantools.playpause" />
+        <package android:name="com.everyonesniche.titantools.kill" />
         <package android:name="com.everyonesniche.titantools.widget1" />
         <package android:name="com.everyonesniche.titantools.widget2" />
         <package android:name="com.everyonesniche.titantools.widget3" />
@@ -104,6 +105,15 @@
             android:excludeFromRecents="true"
             android:noHistory="true"
             android:taskAffinity="com.everyonesniche.titantools.play"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:configChanges="density|fontScale|keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode|locale|layoutDirection" />
+        <activity
+            android:name="com.everyonesniche.titantools.quick.KillActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity="com.everyonesniche.titantools.kill"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:configChanges="density|fontScale|keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode|locale|layoutDirection" />
         <activity

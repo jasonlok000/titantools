@@ -21,6 +21,7 @@ object HelperApps {
         Helper("com.everyonesniche.titantools.flashlight", "TT - Flashlight", "flashlight"),
         Helper("com.everyonesniche.titantools.night", "TT - Night mode", "night"),
         Helper("com.everyonesniche.titantools.playpause", "TT - Play/Pause", "playpause"),
+        Helper("com.everyonesniche.titantools.kill", "TT - Kill app", "kill"),
     ) + (1..WidgetList.SLOTS).map { Helper("com.everyonesniche.titantools.widget$it", "TT - Widget $it", "widget$it") }
 
     fun installed(context: Context, helper: Helper): Boolean = try {

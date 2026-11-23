@@ -27,6 +27,7 @@ export type State = {
   rotation: { on: boolean; status: string };
   flash: { on: boolean; lit: boolean };
   play: { on: boolean };
+  kill: { on: boolean };
   /** Widget buttons: each a name, the widget's app, the picked button, its helper app slot (0 for none), and whether its widget is still there. */
   widgets: WidgetButton[];
   /** The helper apps, which Shortcut keys can pick: installed or not. */
@@ -38,7 +39,7 @@ export type State = {
 
 /** The settings the screens can change, by their native names (Prefs.kt). */
 export type Setting =
-  | "light_on" | "scale_on" | "hold_on" | "rotation_on" | "flash_on" | "night_on" | "play_on" | "hold_vibrate" | "hold_passwords"
+  | "light_on" | "scale_on" | "hold_on" | "rotation_on" | "flash_on" | "night_on" | "play_on" | "kill_on" | "hold_vibrate" | "hold_passwords"
   | "light_level" | "light_dark_lux" | "light_stay_seconds" | "light_preset" | "light_activity"
   | "light_dark_room" | "light_night_hours" | "light_dark_theme" | "light_any_time" | "light_night_from" | "light_night_to"
   | "night_extra_dim" | "night_dim_level" | "night_dark_theme"
@@ -84,7 +85,7 @@ export const clock = (minutes: number) =>
   `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
 
 /** How many of the Shortcuts are on, for the home card. */
-export const shortcutsOn = (s: State) => [s.scale.on, s.rotation.on, s.flash.on, s.night.on, s.play.on].filter(Boolean).length + s.widgets.length;
+export const shortcutsOn = (s: State) => [s.scale.on, s.rotation.on, s.flash.on, s.night.on, s.play.on, s.kill.on].filter(Boolean).length + s.widgets.length;
 
 export type WidgetButton = { id: string; name: string; app: string; button: string; slot: number; ok: boolean };
 

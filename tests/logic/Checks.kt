@@ -11,6 +11,7 @@ import com.everyonesniche.titantools.light.VendorReply
 import com.everyonesniche.titantools.rotate.RotationRule
 import com.everyonesniche.titantools.quick.NightRule
 import com.everyonesniche.titantools.quick.WidgetList
+import com.everyonesniche.titantools.quick.KillRule
 import com.everyonesniche.titantools.scale.ScaleMath
 import com.everyonesniche.titantools.scale.ScaleSettings
 import com.everyonesniche.titantools.scale.WmOutput
@@ -272,7 +273,30 @@ private fun widgetList() {
         WidgetList.defaultName("Clock", "the button you picked") == "Clock")
 }
 
+private fun killApp() {
+    val dump = """
+      * Hist  #0: ActivityRecord{a1 u0 com.everyonesniche.titantools/.quick.KillActivity t9}
+      * Hist  #0: ActivityRecord{b2 u0 com.everyonesniche.titantools.kill/com.everyonesniche.titantools.helper.Go t8}
+      * Hist  #1: ActivityRecord{c3 u0 com.android.deskclock/.DeskClock t7}
+      * Hist  #0: ActivityRecord{d4 u0 com.android.launcher3/.Launcher t1}
+    """
+    check("kill: the app in front, past Titan Tools' own", KillRule.frontApp(dump) == "com.android.deskclock")
+    check("kill: nothing listed", KillRule.frontApp("nothing") == null)
+    val launchers = setOf("com.android.launcher3")
+    check("kill: a normal app can go", !KillRule.protected("com.android.deskclock", "com.titankeys", launchers, false, setOf("com.android.dialer")))
+    check("kill: never the keyboard", KillRule.protected("com.titankeys", "com.titankeys", launchers, false, emptySet()))
+    check("kill: never home, system UI, Shizuku, Titan Tools",
+        listOf("com.android.launcher3", "com.android.systemui", "moe.shizuku.privileged.api", "com.everyonesniche.titantools",
+            "com.everyonesniche.titantools.rotate").all { KillRule.protected(it, null, launchers, false, emptySet()) })
+    check("kill: the phone app only during a call", KillRule.protected("com.android.dialer", null, launchers, true, setOf("com.android.dialer")) &&
+        !KillRule.protected("com.android.dialer", null, launchers, false, setOf("com.android.dialer")))
+    check("kill: Settings may go", !KillRule.protected("com.android.settings", null, launchers, false, emptySet()))
+    check("kill: keyboard package", KillRule.keyboardPackage("com.titankeys/.keyboard.TitanKeysIme") == "com.titankeys" && KillRule.keyboardPackage(null) == null)
+    check("kill: package names", KillRule.valid("com.android.deskclock") && !KillRule.valid("com.x; rm -rf") && !KillRule.valid("nodots"))
+}
+
 fun main() {
+    killApp()
     widgetList()
     nightMode()
     rotation()

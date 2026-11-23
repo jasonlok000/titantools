@@ -54,6 +54,7 @@ class CreateShortcutActivity : Activity() {
         private val ORANGE = Color.parseColor("#EF804E")
         private val CREAM = Color.parseColor("#FFF1E6")
         private val ICONS = mapOf("layout" to R.mipmap.scale_toggle_icon, "rotate" to R.mipmap.rotate_icon,
-            "flashlight" to R.mipmap.flashlight_icon, "night" to R.mipmap.night_icon, "playpause" to R.mipmap.play_icon)
+            "flashlight" to R.mipmap.flashlight_icon, "night" to R.mipmap.night_icon, "playpause" to R.mipmap.play_icon,
+            "kill" to R.mipmap.kill_icon)
     }
 }

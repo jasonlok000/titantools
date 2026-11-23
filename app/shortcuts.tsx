@@ -9,7 +9,7 @@ import { Note } from "../lib/note";
 export default function Shortcuts() {
   const result = useSnapshot(state);
   if (result.status !== "ready") return <Screen title="Shortcuts" />;
-  const { scale, rotation, flash, night, play, widgets, helpers } = result.data;
+  const { scale, rotation, flash, night, play, kill, widgets, helpers } = result.data;
   const slotName = (slot: number) => slot ? `Widget ${slot}` : "No slot";
   return <Screen title="Shortcuts" subtitle="Turn one on, install its app, then pick it in Settings > Shortcut keys.">
     <Section title="Actions">
@@ -23,6 +23,8 @@ export default function Shortcuts() {
         onChange={on => void set("night_on", on)} />
       {night.on && <Field label="Night mode options" href="/night">{""}</Field>}
       <Toggle label="Play/Pause" subtitle={play.on ? "Ready" : "Off"} value={play.on} onChange={on => void set("play_on", on)} />
+      <Toggle label="Kill app" subtitle={kill.on ? "Closes the app in front completely" : "Off"} value={kill.on}
+        onChange={on => void set("kill_on", on)} />
     </Section>
     <Section title="Widget buttons">
       {widgets.map(w => <Field key={w.id} label={w.name} href={`/widget/${w.id}`}>{w.ok ? slotName(w.slot) : "Pick again"}</Field>)}
