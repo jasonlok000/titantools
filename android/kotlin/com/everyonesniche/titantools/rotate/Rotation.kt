@@ -1,13 +1,10 @@
 package com.everyonesniche.titantools.rotate
 
-import android.content.ComponentName
 import android.content.Context
-import android.content.pm.PackageManager
 import android.hardware.display.DisplayManager
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
-import android.service.quicksettings.TileService
 import android.util.Log
 import android.view.Display
 import com.everyonesniche.titantools.core.Prefs
@@ -17,8 +14,8 @@ import com.everyonesniche.titantools.shizuku.Shizuku
 import java.util.concurrent.Executors
 
 /**
- * Rotation: flips the screen between portrait and landscape, locked, from a Quick Settings tile or the "Rotate" launcher entry
- * (which the side button can open). The phone's own auto-rotate and rotation are saved when the tool is turned on and go
+ * Rotation: flips the screen between portrait and landscape, locked, from the "Rotate" launcher entry (which the side
+ * button can open). The phone's own auto-rotate and rotation are saved when the tool is turned on and go
  * back when it's off.
  */
 object Rotation {
@@ -37,7 +34,7 @@ object Rotation {
         null
     }
 
-    /** Turning the tool on or off: saves the phone's own values, or puts them back. Shows the tile and launcher entry only while on. */
+    /** Turning the tool on or off: saves the phone's own values, or puts them back. Shows the launcher entry only while on. */
     fun switched(context: Context, on: Boolean) {
         val app = context.applicationContext
         val prefs = Prefs.of(app)
@@ -77,15 +74,8 @@ object Rotation {
         work.execute { restore(app) }
     }
 
-    /** The tile and the "Rotate" launcher entry exist only while the tool is on. */
-    fun sync(context: Context) {
-        val state = if (Prefs.on(context, Prefs.ROTATION_ON)) PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-            else PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-        for (component in listOf(ComponentName(context, RotateActivity::class.java), ComponentName(context, RotationTile::class.java))) {
-            if (context.packageManager.getComponentEnabledSetting(component) != state)
-                context.packageManager.setComponentEnabledSetting(component, state, PackageManager.DONT_KILL_APP)
-        }
-    }
+    /** The "Rotate" launcher entry exists only while the tool is on. */
+    fun sync(context: Context) = com.everyonesniche.titantools.quick.Shortcuts.sync(context)
 
     /**
      * Flips between portrait and landscape, locked. Waits a moment for Shizuku, whose binder arrives as the process starts.
@@ -118,7 +108,6 @@ object Rotation {
             main.post {
                 done(message)
                 Status.changed()
-                try { TileService.requestListeningState(app, ComponentName(app, RotationTile::class.java)) } catch (ignored: Exception) {}
             }
         }
     }

@@ -44,20 +44,22 @@ object LightRecovery {
      * Never while old NightKeys runs, which owns the timeout itself.
      */
     @Synchronized
-    fun own(context: Context, lit: Boolean, level: Int): Int {
+    fun own(context: Context, lit: Boolean, level: Int, timeout: String = VendorKeys.OWNED_TIMEOUT): Int {
         if (Installed.oldRunning(context, OldApps.of(OldApps.Tool.Light))) return level
         var use = level
         try {
-            val timeout = Shell.readVendor(VendorKeys.TIMEOUT)
+            val timeoutNow = Shell.readVendor(VendorKeys.TIMEOUT)
             var led = Shell.readVendor(VendorKeys.LED)
+            val intelligent = Shell.readVendor(VendorKeys.INTELLIGENT)
             val prefs = Prefs.of(context)
             if (!prefs.getBoolean(Prefs.VENDOR_SAVED, false)) {
-                val saved = VendorKeys.toSave(timeout, Shell.readVendor(VendorKeys.TIMEOUT_BACKUP), led)
+                val saved = VendorKeys.toSave(timeoutNow, Shell.readVendor(VendorKeys.TIMEOUT_BACKUP), led, intelligent)
                 // Saved before the first change, so a crash right after can still put them back.
                 check(prefs.edit().putBoolean(Prefs.VENDOR_SAVED, true).remove(Prefs.LED_WRITTEN)
                     .putString(Prefs.SAVED_TIMEOUT, saved.timeout).putString(Prefs.SAVED_LED, saved.led)
+                    .putString(Prefs.SAVED_INTELLIGENT, saved.intelligent)
                     .putBoolean(Prefs.TIMEOUT_MIGRATED, true).commit()) { "Couldn't save the phone's key light settings" }
-                Log.i(TAG, "Saved the phone's key light settings: timeout ${saved.timeout}, level ${saved.led}")
+                Log.i(TAG, "Saved the phone's key light settings: timeout ${saved.timeout}, level ${saved.led}, automatic ${saved.intelligent}")
             } else {
                 // Builds before version code 5 didn't note what they wrote: then it was the level, or 0.
                 VendorKeys.adopt(led, prefs.getString(Prefs.LED_WRITTEN, null) ?: level.toString())?.let { adopted ->
@@ -68,7 +70,7 @@ object LightRecovery {
                     com.everyonesniche.titantools.core.Status.changed()
                 }
             }
-            for (write in VendorKeys.ownWrites(timeout, led, lit, use)) {
+            for (write in VendorKeys.ownWrites(timeoutNow, led, intelligent, timeout, VendorKeys.ledValue(lit, use))) {
                 val done = Shell.writeVendor(write.key, write.value)
                 Log.i(TAG, "${write.key} = ${write.value}: ${if (done) "done" else "didn't read back"}")
                 if (write.key == VendorKeys.LED && done) {
@@ -96,15 +98,16 @@ object LightRecovery {
         try {
             val timeout = Shell.readVendor(VendorKeys.TIMEOUT)
             if (prefs.getBoolean(Prefs.VENDOR_SAVED, false)) {
-                val saved = VendorKeys.Saved(prefs.getString(Prefs.SAVED_TIMEOUT, null), prefs.getString(Prefs.SAVED_LED, null))
+                val saved = VendorKeys.Saved(prefs.getString(Prefs.SAVED_TIMEOUT, null), prefs.getString(Prefs.SAVED_LED, null),
+                    prefs.getString(Prefs.SAVED_INTELLIGENT, null))
                 var ok = true
-                for (write in VendorKeys.restoreWrites(saved, timeout, Shell.readVendor(VendorKeys.LED))) {
+                for (write in VendorKeys.restoreWrites(saved, timeout, Shell.readVendor(VendorKeys.LED), Shell.readVendor(VendorKeys.INTELLIGENT))) {
                     val done = Shell.writeVendor(write.key, write.value)
                     Log.i(TAG, "Put ${write.key} back to ${write.value}: ${if (done) "done" else "didn't read back"}")
                     ok = ok && done
                 }
                 if (ok) prefs.edit().putBoolean(Prefs.VENDOR_SAVED, false).remove(Prefs.SAVED_TIMEOUT).remove(Prefs.SAVED_LED)
-                    .remove(Prefs.LED_WRITTEN).commit()
+                    .remove(Prefs.SAVED_INTELLIGENT).remove(Prefs.LED_WRITTEN).commit()
             } else if (!prefs.getBoolean(Prefs.TIMEOUT_MIGRATED, false)) {
                 VendorKeys.legacyRestore(timeout, Shell.readVendor(VendorKeys.TIMEOUT_BACKUP))?.let {
                     val done = Shell.writeVendor(VendorKeys.TIMEOUT, it)

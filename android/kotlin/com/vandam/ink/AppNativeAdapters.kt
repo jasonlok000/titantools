@@ -23,6 +23,11 @@ import com.everyonesniche.titantools.hold.HoldPause
 import com.everyonesniche.titantools.hold.HoldService
 import com.everyonesniche.titantools.light.LightRecovery
 import com.everyonesniche.titantools.light.LightService
+import com.everyonesniche.titantools.quick.NightMode
+import com.everyonesniche.titantools.quick.Shortcuts
+import com.everyonesniche.titantools.quick.Torch
+import com.everyonesniche.titantools.quick.WidgetButton
+import com.everyonesniche.titantools.quick.WidgetSetupActivity
 import com.everyonesniche.titantools.rotate.Rotation
 import com.everyonesniche.titantools.scale.ScaleActivity
 import com.everyonesniche.titantools.scale.ScaleSettings
@@ -69,6 +74,7 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
             Installed.forget()
             LightRecovery.checkSoon(activity)
             Rotation.restoreSoon(activity)
+            NightMode.restoreSoon(activity)
             changed()
         }
     }
@@ -87,7 +93,8 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
         activity.application.registerActivityLifecycleCallbacks(this)
         LightService.sync(activity)
         ScaleActivity.sync(activity)
-        Rotation.sync(activity)
+        Shortcuts.sync(activity)
+        Torch.ready(activity)
         LightRecovery.checkSoon(activity)
         Rotation.restoreSoon(activity)
     }
@@ -141,7 +148,24 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
     private fun set(key: String, value: Any) {
         val editor = Prefs.of(activity).edit()
         when (key) {
-            Prefs.LIGHT_ON, Prefs.SCALE_ON, Prefs.HOLD_ON, Prefs.ROTATION_ON, Prefs.HOLD_VIBRATE, Prefs.HOLD_PASSWORDS -> editor.putBoolean(key, value as Boolean)
+            Prefs.LIGHT_ON, Prefs.SCALE_ON, Prefs.HOLD_ON, Prefs.ROTATION_ON, Prefs.FLASH_ON, Prefs.NIGHT_ON, Prefs.PLAY_ON, Prefs.WIDGET_ON,
+            Prefs.HOLD_VIBRATE, Prefs.HOLD_PASSWORDS, Prefs.NIGHT_EXTRA_DIM, Prefs.NIGHT_DARK_THEME -> editor.putBoolean(key, value as Boolean)
+            // Editing a list makes the light's rule Custom.
+            Prefs.LIGHT_DARK_ROOM, Prefs.LIGHT_NIGHT_HOURS, Prefs.LIGHT_DARK_THEME, Prefs.LIGHT_ANY_TIME ->
+                editor.putBoolean(key, value as Boolean).putString(Prefs.LIGHT_PRESET, LightRule.Preset.Custom.id)
+            Prefs.LIGHT_ACTIVITY -> editor.putString(key, LightRule.Activity.of(value as String).id)
+                .putString(Prefs.LIGHT_PRESET, LightRule.Preset.Custom.id)
+            Prefs.LIGHT_PRESET -> {
+                val preset = LightRule.Preset.of(value as String)
+                editor.putString(key, preset.id)
+                LightRule.presetLists(preset)?.let { (d, a) ->
+                    editor.putBoolean(Prefs.LIGHT_DARK_ROOM, d.darkRoom).putBoolean(Prefs.LIGHT_NIGHT_HOURS, d.nightHours)
+                        .putBoolean(Prefs.LIGHT_DARK_THEME, d.darkTheme).putBoolean(Prefs.LIGHT_ANY_TIME, d.anyTime)
+                        .putString(Prefs.LIGHT_ACTIVITY, a.id)
+                }
+            }
+            Prefs.LIGHT_NIGHT_FROM, Prefs.LIGHT_NIGHT_TO -> editor.putInt(key, ((value as Number).toInt() / 30 * 30).coerceIn(0, 1410))
+            Prefs.NIGHT_DIM_LEVEL -> editor.putInt(key, (value as Number).toInt().coerceIn(0, 100))
             Prefs.LIGHT_LEVEL -> editor.putInt(Prefs.LIGHT_LEVEL_VALUE, (value as Number).toInt().takeIf(LightLevels::valid) ?: LightLevels.DEFAULT)
                 .remove(Prefs.LIGHT_LEVEL).remove(Prefs.LIGHT_LEVEL_NAME)
             Prefs.LIGHT_WHEN -> editor.putString(key, if (value == "typing") "typing" else "screen")
@@ -160,9 +184,21 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
         }
         check(editor.commit()) { "Couldn't save that" }
         when (key) {
-            Prefs.LIGHT_ON, Prefs.LIGHT_LEVEL, Prefs.LIGHT_DARK_LUX, Prefs.LIGHT_WHEN, Prefs.LIGHT_STAY_SECONDS -> LightService.sync(activity)
+            Prefs.LIGHT_ON, Prefs.LIGHT_LEVEL, Prefs.LIGHT_DARK_LUX, Prefs.LIGHT_WHEN, Prefs.LIGHT_STAY_SECONDS, Prefs.LIGHT_PRESET,
+            Prefs.LIGHT_DARK_ROOM, Prefs.LIGHT_NIGHT_HOURS, Prefs.LIGHT_DARK_THEME, Prefs.LIGHT_ANY_TIME, Prefs.LIGHT_ACTIVITY,
+            Prefs.LIGHT_NIGHT_FROM, Prefs.LIGHT_NIGHT_TO -> LightService.sync(activity)
             Prefs.SCALE_ON -> ScaleActivity.sync(activity)
             Prefs.ROTATION_ON -> Rotation.switched(activity, value as Boolean)
+            Prefs.FLASH_ON, Prefs.PLAY_ON -> Shortcuts.sync(activity)
+            Prefs.WIDGET_ON -> {
+                Shortcuts.sync(activity)
+                // Turned on with no widget yet: pick one now.
+                if (value == true && WidgetButton.info(activity) == null) open("widgetSetup")
+            }
+            Prefs.NIGHT_ON -> {
+                Shortcuts.sync(activity)
+                if (value == false) NightMode.restoreSoon(activity)
+            }
         }
         changed()
     }
@@ -179,6 +215,8 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
             "appInfo" -> Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${activity.packageName}"))
             "shortcutKeys" -> shortcutKeys()
             "scaleNow" -> Intent(activity, ScaleActivity::class.java)
+            "widgetSetup" -> Intent(activity, WidgetSetupActivity::class.java)
+            "widgetNew" -> Intent(activity, WidgetSetupActivity::class.java).putExtra(WidgetSetupActivity.EXTRA_NEW, true)
             "titanKeysPage" -> Intent(Intent.ACTION_VIEW, Uri.parse("https://everyones-niche.com/titankeys/"))
             "titanKeysApp" -> activity.packageManager.getLaunchIntentForPackage(Installed.TITANKEYS)
                 ?: Intent(Intent.ACTION_VIEW, Uri.parse("https://everyones-niche.com/titankeys/"))
@@ -261,6 +299,10 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
         val level = Prefs.level(activity)
         val link = Link.current(activity)
         val now = System.currentTimeMillis()
+        val darkness = Prefs.darkness(activity)
+        val lightActivity = Prefs.activity(activity)
+        val titanKeysKeyboard = HoldPause.pausedFor(defaultIme)
+        val source = LightRule.source(lightActivity, titanKeysKeyboard, LightRule.alive(link, now))
         val old = JSONArray()
         for (app in Installed.oldApps(activity)) {
             old.put(JSONObject().put("packageName", app.packageName).put("name", app.name).put("tool", app.tool.id)
@@ -272,7 +314,11 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
                 .put("everAllowed", Shizuku.everAllowed(activity)))
             .put("light", JSONObject().put("on", lightOn).put("status", lightStatus).put("follows", lightOn && Status.lightFollows)
                 .put("level", level).put("levelChoice", LightLevels.nearest(level)).put("darkLux", Prefs.darkLux(activity).toDouble())
-                .put("when", if (Prefs.wantTyping(activity)) "typing" else "screen").put("staySeconds", Prefs.staySeconds(activity))
+                .put("preset", Prefs.preset(activity).id).put("activity", lightActivity.id)
+                .put("darkRoom", darkness.darkRoom).put("nightHours", darkness.nightHours).put("darkTheme", darkness.darkTheme)
+                .put("anyTime", darkness.anyTime).put("nightFrom", Prefs.nightFrom(activity)).put("nightTo", Prefs.nightTo(activity))
+                .put("staySeconds", Prefs.staySeconds(activity)).put("titanKeysKeyboard", titanKeysKeyboard)
+                .put("keyPresses", source == LightRule.Source.FirmwareKeys)
                 .put("linkSeen", link.seen).put("linkAlive", LightRule.alive(link, now)))
             .put("scale", JSONObject().put("on", scaleOn).put("status", scaleStatus)
                 .put("phoneDpi", prefs.getInt(Prefs.PHONE_DPI, 0)).put("tabletDpi", prefs.getInt(Prefs.TABLET_DPI, 0)))
@@ -281,6 +327,14 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
                 .put("passwords", prefs.getBoolean(Prefs.HOLD_PASSWORDS, false)))
             .put("rotation", JSONObject().put("on", prefs.getBoolean(Prefs.ROTATION_ON, false))
                 .put("status", if (!prefs.getBoolean(Prefs.ROTATION_ON, false)) "Off" else shizukuPause ?: Rotation.label(activity)))
+            .put("flash", JSONObject().put("on", prefs.getBoolean(Prefs.FLASH_ON, false)).put("lit", Torch.on))
+            .put("play", JSONObject().put("on", prefs.getBoolean(Prefs.PLAY_ON, false)))
+            .put("widget", JSONObject().put("on", prefs.getBoolean(Prefs.WIDGET_ON, false))
+                .put("picked", WidgetButton.info(activity) != null)
+                .put("app", WidgetButton.appName(activity) ?: "").put("button", WidgetButton.buttonName(activity) ?: ""))
+            .put("night", JSONObject().put("on", prefs.getBoolean(Prefs.NIGHT_ON, false)).put("active", NightMode.active(activity))
+                .put("extraDim", prefs.getBoolean(Prefs.NIGHT_EXTRA_DIM, true)).put("dimLevel", NightMode.dimLevel(activity))
+                .put("darkTheme", prefs.getBoolean(Prefs.NIGHT_DARK_THEME, false)))
             .put("oldApps", old)
             .put("titanKeys", JSONObject().put("installed", Installed.has(activity, Installed.TITANKEYS))
                 .put("selected", HoldPause.pausedFor(defaultIme)))

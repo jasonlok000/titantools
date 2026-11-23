@@ -1,9 +1,9 @@
 import { useEffect } from "react";
 import { Field, Screen, Section, Toggle, useSnapshot } from "ink";
-import { lightWhenLabel, open, ready, set, shizukuStopped, state, uninstall } from "../lib/titantools";
+import { open, presetName, ready, set, shortcutsOn, shizukuStopped, state, uninstall } from "../lib/titantools";
 import { Note } from "../lib/note";
 
-/** One card per tool: a switch with a plain status line, and its details behind one row. */
+/** One card per tool: a switch with a plain status line, and its details behind one row. Shortcuts are one card of their own. */
 export default function Home() {
   const result = useSnapshot(state);
   useEffect(() => void state.refresh(), []);
@@ -11,6 +11,7 @@ export default function Home() {
   const s = result.data;
   const stopped = shizukuStopped(s);
   const needsSetup = !ready(s) && !stopped;
+  const shortcuts = shortcutsOn(s);
   return <Screen title="Titan Tools" subtitle="Small tools for the Titan 2 Elite. Turn on the ones you want.">
     {stopped && <Section title="Shizuku stopped">
       <Note>Shizuku stops when the phone restarts. Start it again and your tools carry on.</Note>
@@ -18,19 +19,13 @@ export default function Home() {
     </Section>}
     {needsSetup && <Section title="Setup">
       <Field label="Set up Titan Tools" href="/setup">To do</Field>
-      <Note>Three quick steps with Shizuku, the app that lets Titan Tools change the light, the screen size and keys.</Note>
+      <Note>Three quick steps with Shizuku, the app that lets Titan Tools change the light, the screen and keys.</Note>
     </Section>}
 
     <Section title="Keyboard light">
-      <Toggle label="Light the keys in the dark" subtitle={s.light.status} value={s.light.on}
+      <Toggle label="Light the keys" subtitle={s.light.status} value={s.light.on}
         onChange={on => void set("light_on", on)} />
-      <Field label="Light when" href="/light">{lightWhenLabel(s.light)}</Field>
-    </Section>
-
-    <Section title="Scale Toggle">
-      <Toggle label="Switch phone and tablet layout" subtitle={s.scale.status} value={s.scale.on}
-        onChange={on => void set("scale_on", on)} />
-      <Field label="Side button and sizes" href="/scale">{""}</Field>
+      <Field label="When" href="/light">{presetName(s.light.preset)}</Field>
     </Section>
 
     <Section title="Hold Symbols">
@@ -41,10 +36,8 @@ export default function Home() {
       <Field label="Hold time and more" href="/hold">{""}</Field>
     </Section>
 
-    <Section title="Rotation">
-      <Toggle label="Flip portrait and landscape" subtitle={s.rotation.status} value={s.rotation.on}
-        onChange={on => void set("rotation_on", on)} />
-      <Field label="Tile and side button" href="/rotation">{""}</Field>
+    <Section title="Shortcuts">
+      <Field label="Switch layout, rotate, flashlight and more" href="/shortcuts">{shortcuts ? `${shortcuts} on` : "None on"}</Field>
     </Section>
 
     {s.oldApps.length > 0 && <Section title="Remove the old apps">
@@ -56,7 +49,7 @@ export default function Home() {
     <Section title="TitanKeys">
       {s.titanKeys.installed
         ? <>
-          <Note>TitanKeys is installed. With TitanKeys 3.1 or later as your keyboard, the light follows your typing.</Note>
+          <Note>TitanKeys is installed. With TitanKeys 3.1 or later as your keyboard, the light can follow your typing.</Note>
           <Field label="Open TitanKeys" onPress={() => void open("titanKeysApp")}>{""}</Field>
         </>
         : <>

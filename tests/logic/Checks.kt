@@ -9,6 +9,7 @@ import com.everyonesniche.titantools.light.LightRule.Link
 import com.everyonesniche.titantools.light.VendorKeys
 import com.everyonesniche.titantools.light.VendorReply
 import com.everyonesniche.titantools.rotate.RotationRule
+import com.everyonesniche.titantools.quick.NightRule
 import com.everyonesniche.titantools.scale.ScaleMath
 import com.everyonesniche.titantools.scale.ScaleSettings
 import com.everyonesniche.titantools.scale.WmOutput
@@ -24,45 +25,77 @@ private fun check(name: String, ok: Boolean) {
 private fun lightRule() {
     val now = 1_800_000_000_000L
     val none = Link()
-    // "Dark and screen on", the default.
-    check("screen: dark and screen on lights", LightRule.lit(true, true, false, none, now))
-    check("screen: bright stays off", !LightRule.lit(false, true, false, none, now))
-    check("screen: screen off stays off", !LightRule.lit(true, false, false, none, now))
-    check("screen: typing doesn't matter", LightRule.lit(true, true, false, none.after(false, now - 60_000, now), now))
-    check("screen: no next change", LightRule.nextChange(false, none.after(true, now, now), now) == -1L)
+    // Darkness: any of the picked ones.
+    val room = LightRule.Darkness(darkRoom = true, nightHours = false, darkTheme = false, anyTime = false)
+    val night = LightRule.Darkness(darkRoom = false, nightHours = true, darkTheme = false, anyTime = false)
+    val theme = LightRule.Darkness(darkRoom = false, nightHours = false, darkTheme = true, anyTime = false)
+    val any = LightRule.Darkness(darkRoom = false, nightHours = false, darkTheme = false, anyTime = true)
+    val nothing = LightRule.Darkness(false, false, false, false)
+    fun facts(roomDark: Boolean = false, minute: Int = 12 * 60, themeDark: Boolean = false) =
+        LightRule.Facts(roomDark, minute, 20 * 60, 7 * 60, themeDark)
+    check("dark room: dark", LightRule.dark(room, facts(roomDark = true)))
+    check("dark room: bright", !LightRule.dark(room, facts()))
+    check("night hours: 23:00", LightRule.dark(night, facts(minute = 23 * 60)))
+    check("night hours: 06:59", LightRule.dark(night, facts(minute = 7 * 60 - 1)))
+    check("night hours: 07:00 is day", !LightRule.dark(night, facts(minute = 7 * 60)))
+    check("night hours: noon is day", !LightRule.dark(night, facts()))
+    check("hours within a day", LightRule.inHours(600, 540, 1020) && !LightRule.inHours(1020, 540, 1020))
+    check("equal hours: never", !LightRule.inHours(600, 600, 600))
+    check("dark theme", LightRule.dark(theme, facts(themeDark = true)) && !LightRule.dark(theme, facts()))
+    check("any time", LightRule.dark(any, facts()))
+    check("none picked: never", !LightRule.dark(nothing, facts(roomDark = true, minute = 23 * 60, themeDark = true)))
+    check("any of several", LightRule.dark(room.copy(nightHours = true), facts(minute = 22 * 60)))
 
-    // "Dark and typing", over the link.
-    check("typing, no link yet: falls back to screen on", LightRule.lit(true, true, true, none, now))
-    check("typing, no link yet: mode", LightRule.mode(true, none, now) == LightRule.Mode.DarkAndScreenOn)
-    check("typing, no link: not seen", !none.seen)
+    // Where the activity comes from.
+    check("screen on: screen", LightRule.source(LightRule.Activity.Screen, true, true) == LightRule.Source.Screen)
+    check("field, other keyboard: the input flag", LightRule.source(LightRule.Activity.Field, false, true) == LightRule.Source.InputFlag)
+    check("field, TitanKeys with the link: the link", LightRule.source(LightRule.Activity.Field, true, true) == LightRule.Source.LinkField)
+    check("field, TitanKeys, link quiet: screen on", LightRule.source(LightRule.Activity.Field, true, false) == LightRule.Source.Screen)
+    check("typing, TitanKeys with the link: the link", LightRule.source(LightRule.Activity.Typing, true, true) == LightRule.Source.LinkTyping)
+    check("typing, TitanKeys, link quiet: key presses", LightRule.source(LightRule.Activity.Typing, true, false) == LightRule.Source.FirmwareKeys)
+    check("typing, other keyboard: key presses", LightRule.source(LightRule.Activity.Typing, false, true) == LightRule.Source.FirmwareKeys)
+
+    // Lit or not.
+    check("screen: dark and on lights", LightRule.lit(LightRule.Source.Screen, true, true, none, now, 5000))
+    check("screen off always off", !LightRule.lit(LightRule.Source.Screen, true, false, none, now, 5000))
+    check("not dark: off", !LightRule.lit(LightRule.Source.Screen, false, true, none, now, 5000))
     val typing = none.after(true, now - 1000, now)
-    check("typing: seen", typing.seen)
-    check("typing: follows TitanKeys", LightRule.mode(true, typing, now) == LightRule.Mode.FollowsTitanKeys)
-    check("typing in the dark lights", LightRule.lit(true, true, true, typing, now))
-    check("typing but bright stays off", !LightRule.lit(false, true, true, typing, now))
-    check("typing but screen off stays off", !LightRule.lit(true, false, true, typing, now))
-    check("typing: off after 5 s by default", !LightRule.lit(true, true, true, typing, now + 4_000))
-    check("typing: still on before 5 s", LightRule.lit(true, true, true, typing, now + 3_900))
-    check("typing: a 30 s stay keeps it on", LightRule.lit(true, true, true, typing, now + 20_000, 30_000))
+    check("typing: lit within the stay", LightRule.lit(LightRule.Source.LinkTyping, true, true, typing, now, 5000))
+    check("typing: off after the stay", !LightRule.lit(LightRule.Source.LinkTyping, true, true, typing, now + 4000, 5000))
+    check("typing: a 0 stay follows the flag", LightRule.lit(LightRule.Source.LinkTyping, true, true, typing, now + 4000, 0))
     val stopped = typing.after(false, now, now)
-    check("stopped: lit for the stay after it", LightRule.lit(true, true, true, stopped, now + 1_900, 2_000))
-    check("stopped: off after the stay", !LightRule.lit(true, true, true, stopped, now + 2_000, 2_000))
-    check("stopped: next change at the stay's end", LightRule.nextChange(true, stopped, now + 1000, 10_000) == now + 10_000)
-    val again = stopped.after(true, now + 20_000, now + 20_000)
-    check("typing again relights at once", LightRule.lit(true, true, true, again, now + 20_000, 2_000))
+    check("typing stopped, 0 stay: off", !LightRule.lit(LightRule.Source.LinkTyping, true, true, stopped, now + 1, 0))
+    check("typing again relights", LightRule.lit(LightRule.Source.LinkTyping, true, true, stopped.after(true, now + 20_000, now + 20_000), now + 20_000, 2000))
+    check("field via link: open", LightRule.lit(LightRule.Source.LinkField, true, true, typing, now + 60_000, 2000))
+    check("field via link: closed, within the stay", LightRule.lit(LightRule.Source.LinkField, true, true, stopped, now + 1000, 2000))
+    check("field via link: closed, after the stay", !LightRule.lit(LightRule.Source.LinkField, true, true, stopped, now + 2000, 2000))
+    check("input flag: open", LightRule.lit(LightRule.Source.InputFlag, true, true, none, now, 2000, fieldOpen = true))
+    check("input flag: closed within the stay", LightRule.lit(LightRule.Source.InputFlag, true, true, none, now, 2000, false, now - 1000))
+    check("input flag: closed after the stay", !LightRule.lit(LightRule.Source.InputFlag, true, true, none, now, 2000, false, now - 2000))
+    check("key presses: Titan Tools never lights itself", !LightRule.lit(LightRule.Source.FirmwareKeys, true, true, typing, now, 5000))
+    check("key presses: the level while dark", LightRule.firmwareLevelOn(LightRule.Source.FirmwareKeys, true, true))
+    check("key presses: 0 when not dark or screen off",
+        !LightRule.firmwareLevelOn(LightRule.Source.FirmwareKeys, false, true) && !LightRule.firmwareLevelOn(LightRule.Source.FirmwareKeys, true, false))
+    check("key presses: at least a second", LightRule.firmwareTimeout(0) == 1000L && LightRule.firmwareTimeout(5000) == 5000L)
+    check("next change: the stay's end", LightRule.nextChange(LightRule.Source.LinkTyping, typing, now, 5000) == now + 4000)
+    check("next change: the link going quiet", LightRule.nextChange(LightRule.Source.LinkTyping, typing, now + 10_000, 5000) == now - 1000 + LightRule.LINK_FRESH_MILLIS)
+    check("next change: none without the link", LightRule.nextChange(LightRule.Source.Screen, none, now, 5000) == -1L)
+
+    // Link.
+    check("no link yet: not seen", !none.seen && typing.seen)
     check("link: alive at 9:59", LightRule.alive(stopped, now + 599_000))
     check("link: quiet at 10:00", !LightRule.alive(stopped, now + 600_000))
-    check("quiet link: back to dark and screen on", LightRule.lit(true, true, true, stopped, now + 600_000))
-    check("quiet link: mode", LightRule.mode(true, stopped, now + 600_000) == LightRule.Mode.DarkAndScreenOn)
-    check("quiet link: no next change", LightRule.nextChange(true, stopped, now + 600_000) == -1L)
-    check("after the stay: next change is the link going quiet", LightRule.nextChange(true, typing, now + 10_000) == now - 1000 + LightRule.LINK_FRESH_MILLIS)
-
     check("older message ignored", stopped.after(true, now - 5000, now + 10) == stopped)
-    val future = none.after(true, now + 60_000, now)
-    check("a time from the future counts as now", future.lastAt == now)
-    val zero = none.after(true, 0, now)
-    check("a missing time counts as now", zero.lastAt == now && LightRule.alive(zero, now))
+    check("a time from the future counts as now", none.after(true, now + 60_000, now).lastAt == now)
+    check("a missing time counts as now", none.after(true, 0, now).lastAt == now)
     check("a message from before a clock change isn't alive", !LightRule.alive(typing, now - 10_000))
+
+    // Presets.
+    check("night typing: dark room and typing", LightRule.presetLists(LightRule.Preset.NightTyping) == Pair(room, LightRule.Activity.Typing))
+    check("always in the dark: dark room and screen on", LightRule.presetLists(LightRule.Preset.AlwaysInTheDark) == Pair(room, LightRule.Activity.Screen))
+    check("phone's own and custom set nothing",
+        LightRule.presetLists(LightRule.Preset.PhonesOwn) == null && LightRule.presetLists(LightRule.Preset.Custom) == null)
+    check("default preset", LightRule.Preset.of(null) == LightRule.Preset.AlwaysInTheDark && LightRule.Activity.of("x") == LightRule.Activity.Screen)
 }
 
 private fun adoption() {
@@ -84,13 +117,18 @@ private fun vendorKeys() {
     check("save: no usable backup, the timeout", VendorKeys.toSave("30000", M, "100") == VendorKeys.Saved("30000", "100"))
     check("save: missing keys are null", VendorKeys.toSave(M, M, M) == VendorKeys.Saved(null, null))
     check("save: garbage is null", VendorKeys.toSave("x", "y", "300") == VendorKeys.Saved(null, null))
-    // Owning: timeout -1, the stored level = ours when lit, 0 when not.
-    check("own, lit", VendorKeys.ownWrites("0", "100", true, 64) == listOf(W(T, "-1"), W(L, "64")))
-    check("own, off", VendorKeys.ownWrites("-1", "64", false, 64) == listOf(W(L, "0")))
-    check("own: already right, nothing", VendorKeys.ownWrites("-1", "24", true, 24).isEmpty())
-    check("own: missing keys never block", VendorKeys.ownWrites(M, M, true, 24).isEmpty())
-    check("own: unreadable keys never block", VendorKeys.ownWrites(null, null, false, 24).isEmpty())
-    check("own: a missing level still sets the timeout", VendorKeys.ownWrites("0", M, true, 24) == listOf(W(T, "-1")))
+    // Owning: the automatic light off, the timeout, the level.
+    val I = VendorKeys.INTELLIGENT
+    check("own, lit", VendorKeys.ownWrites("0", "100", "1", "-1", "64") == listOf(W(I, "0"), W(T, "-1"), W(L, "64")))
+    check("own, off", VendorKeys.ownWrites("-1", "64", "0", "-1", "0") == listOf(W(L, "0")))
+    check("own, key presses: the stay as timeout", VendorKeys.ownWrites("-1", "0", "0", "5000", "64") == listOf(W(T, "5000"), W(L, "64")))
+    check("own: already right, nothing", VendorKeys.ownWrites("-1", "24", "0", "-1", "24").isEmpty())
+    check("own: missing keys never block", VendorKeys.ownWrites(M, M, M, "-1", "24").isEmpty())
+    check("own: unreadable keys never block", VendorKeys.ownWrites(null, null, null, "-1", "0").isEmpty())
+    check("level value", VendorKeys.ledValue(true, 24) == "24" && VendorKeys.ledValue(false, 24) == "0")
+    check("save: the automatic light too", VendorKeys.toSave("0", "-1", "100", "1") == VendorKeys.Saved("-1", "100", "1"))
+    check("restore: the automatic light too",
+        VendorKeys.restoreWrites(VendorKeys.Saved("-1", "100", "1"), "-1", "24", "0") == listOf(W(L, "100"), W(I, "1")))
     // Giving back.
     val saved = VendorKeys.Saved("-1", "100")
     check("restore: both back", VendorKeys.restoreWrites(VendorKeys.Saved("30000", "100"), "-1", "0") == listOf(W(T, "30000"), W(L, "100")))
@@ -204,7 +242,20 @@ private fun rotation() {
     check("off: a bad saved value is skipped", RotationRule.restoreWrites(RotationRule.Saved(5, 9), 0, 1).isEmpty())
 }
 
+private fun nightMode() {
+    val options = NightRule.Options(extraDim = true, dimLevel = 40, darkTheme = false)
+    check("on: night light, strength, extra dim", NightRule.onWrites(options) ==
+        listOf(NightRule.NIGHT_LIGHT to 1, NightRule.DIM_LEVEL to 40, NightRule.EXTRA_DIM to 1))
+    check("on: without extra dim, only night light", NightRule.onWrites(options.copy(extraDim = false)) == listOf(NightRule.NIGHT_LIGHT to 1))
+    check("on: strength kept in range", NightRule.onWrites(options.copy(dimLevel = 150))[1] == (NightRule.DIM_LEVEL to 100))
+    val saved = NightRule.Saved(nightLight = 0, extraDim = 0, dimLevel = 70, darkTheme = false)
+    check("off: all back", NightRule.offWrites(saved) == listOf(NightRule.NIGHT_LIGHT to 0, NightRule.DIM_LEVEL to 70, NightRule.EXTRA_DIM to 0))
+    check("off: unknown left alone", NightRule.offWrites(NightRule.Saved(null, null, null, null)).isEmpty())
+    check("off: the theme only if Night mode set it", NightRule.offTheme(saved, true) == false && NightRule.offTheme(saved, false) == null)
+}
+
 fun main() {
+    nightMode()
     rotation()
     levels()
     adoption()

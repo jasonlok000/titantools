@@ -10,6 +10,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.ServiceInfo
+import android.content.res.Configuration
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -20,6 +21,7 @@ import android.os.HandlerThread
 import android.os.IBinder
 import android.os.PowerManager
 import android.os.SystemClock
+import android.provider.Settings
 import android.util.Log
 import android.view.Display
 import com.everyonesniche.titantools.core.Installed
@@ -27,14 +29,17 @@ import com.everyonesniche.titantools.core.Link
 import com.everyonesniche.titantools.core.OldApps
 import com.everyonesniche.titantools.core.Prefs
 import com.everyonesniche.titantools.core.Status
+import com.everyonesniche.titantools.hold.HoldPause
 import com.everyonesniche.titantools.shizuku.Shell
 import com.everyonesniche.titantools.shizuku.Shizuku
+import java.util.Calendar
 
 /**
- * The keyboard light. Runs while its switch is on. It reads the light sensor (NightKeys' LightPolicy and thresholds), the
- * screen and the link with TitanKeys, decides with [LightRule], and sets the firmware's own stored level and timeout so its
- * key presses keep that level (VendorKeys), with one direct write at each change. The light goes to 0 when it's bright, the screen goes off, the switch goes off, this service
- * stops, and after a crash ([LightJournal]).
+ * The keyboard light. Runs while its switch is on: "Light the keys when [darkness] and [activity]" (LightRule). It reads the
+ * light sensor (NightKeys' LightPolicy), the clock, the dark theme, the screen, the link with TitanKeys and the phone's input
+ * flag, and sets the firmware's own key light settings (VendorKeys) so its key presses keep the right level, with one direct
+ * write at each change. The light goes to 0 when it's not dark, the screen goes off, the switch goes off, this service stops,
+ * and after a crash ([LightJournal]). "Phone's own" hands the light back to the phone.
  *
  * Everything runs on one worker thread; the screen going off jumps to the front of its queue.
  */
@@ -46,16 +51,20 @@ class LightService : Service(), SensorEventListener {
     private var registered = false
     private var policy: LightPolicy? = null
     private var screenOn = false
+    /** Titan Tools' own light is on (written straight to the light). */
     private var lit = false
-    /** When the firmware's settings were last checked, and when the lit level was last written straight to the light. */
+    /** What the firmware's settings were last set to: "lit/level on/timeout", or null before the first time. */
+    private var applied: String? = null
     private var vendorCheckedAt = 0L
     private var assertedAt = 0L
     private var level = Prefs.DEFAULT_LEVEL
     private var unsupported = false
     private var darkLux = Float.NaN
-    /** "Dark and typing" is picked, and how long the light stays on after TitanKeys' last message. */
-    private var wantTyping = false
-    private var stayMillis = LightRule.DEFAULT_STAY_MILLIS
+    private var settings = ""
+    /** The phone's input flag (Text field open, other keyboards), and when it last closed. */
+    private var fieldOpen = false
+    private var fieldClosedAt = 0L
+    private var handedBack = false
     private var lastNotification = ""
     private var stopListening: List<() -> Unit> = emptyList()
 
@@ -99,31 +108,35 @@ class LightService : Service(), SensorEventListener {
         // Settings may have changed: a new threshold starts the reading afresh, a new level applies at once. Nothing changed
         // (as when the service has only just started): nothing to do, so the light never flickers.
         worker.post {
-            val darkChanged = Prefs.darkLux(this) != darkLux
-            val levelChanged = Prefs.level(this) != level
-            val whenChanged = Prefs.wantTyping(this) != wantTyping || Prefs.staySeconds(this) * 1000L != stayMillis
-            wantTyping = Prefs.wantTyping(this)
-            stayMillis = Prefs.staySeconds(this) * 1000L
-            if (darkChanged) {
-                rebuildPolicy()
-                if (lit) setLit(false)
-                screenChanged()
-            } else if (levelChanged) {
-                level = Prefs.level(this)
-                if (lit) setLit(true)
-            } else if (whenChanged) {
-                evaluate()
+            when {
+                Prefs.darkLux(this) != darkLux -> {
+                    rebuildPolicy()
+                    screenChanged()
+                }
+                Prefs.level(this) != level -> {
+                    level = Prefs.level(this)
+                    applied = null
+                    evaluate()
+                }
+                settingsKey() != settings -> evaluate()
             }
         }
         return START_STICKY
     }
 
+    /** The dark theme changed: the darkness rule may have. */
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        worker.post(evaluate)
+    }
+
+    private fun settingsKey() = "${Prefs.preset(this)}/${Prefs.darkness(this)}/${Prefs.activity(this)}/${Prefs.staySeconds(this)}/" +
+        "${Prefs.nightFrom(this)}/${Prefs.nightTo(this)}"
+
     private fun rebuildPolicy() {
         val dark = Prefs.darkLux(this)
         darkLux = dark
         level = Prefs.level(this)
-        wantTyping = Prefs.wantTyping(this)
-        stayMillis = Prefs.staySeconds(this) * 1000L
         policy = LightPolicy(dark, Prefs.brightLux(dark), 0, 250).apply {
             setEnabled(true)
             setInteractive(screenIsOn())
@@ -141,12 +154,7 @@ class LightService : Service(), SensorEventListener {
         val changed = now != screenOn
         screenOn = now
         policy?.setInteractive(now)
-        if (!now) {
-            unregisterSensor()
-            if (lit) setLit(false)
-        } else if (changed || !registered) {
-            registerSensor()
-        }
+        if (!now) unregisterSensor() else if (changed || !registered) registerSensor()
         evaluate()
     }
 
@@ -168,107 +176,152 @@ class LightService : Service(), SensorEventListener {
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
 
+    private fun themeDark(): Boolean =
+        (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+
+    private fun minuteOfDay(): Int = Calendar.getInstance().let { it.get(Calendar.HOUR_OF_DAY) * 60 + it.get(Calendar.MINUTE) }
+
     /** Decides and applies, then says why on the home screen and in the notification. */
     private fun evaluate() {
         worker.removeCallbacks(evaluate)
         val policy = policy ?: return
         val now = System.currentTimeMillis()
         policy.tick(SystemClock.elapsedRealtime())
+        settings = settingsKey()
         val link = Link.current(this)
-        val mode = LightRule.mode(wantTyping, link, now)
-        val status: String
-        var want = false
+        val titanKeys = HoldPause.pausedFor(Settings.Secure.getString(contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD))
+        val darkness = Prefs.darkness(this)
+        val activity = Prefs.activity(this)
+        val stayMillis = Prefs.staySeconds(this) * 1000L
+        val source = LightRule.source(activity, titanKeys, LightRule.alive(link, now))
+        val ready = Shizuku.allowed() && !Installed.blocked(this, OldApps.Tool.Light)
+        val waiting = darkness.darkRoom && policy.reason() == LightPolicy.Reason.WAITING_FOR_SENSOR
+        val dark = LightRule.dark(darkness, LightRule.Facts(policy.shouldLight(), minuteOfDay(), Prefs.nightFrom(this),
+            Prefs.nightTo(this), themeDark()))
+
+        var status: String
+        var wantLit = false
+        var wantLevel = false
+        var poll = false
         when {
-            light == null -> status = "Paused: this phone has no light sensor"
+            darkness.darkRoom && light == null -> status = "Paused: this phone has no light sensor"
             !Shizuku.running() -> status = if (Shizuku.installed(this)) "Paused: start Shizuku" else "Paused: Shizuku isn't installed"
             !Shizuku.allowed() -> status = "Paused: allow Titan Tools in Shizuku"
             Installed.blocked(this, OldApps.Tool.Light) -> status = "Paused: NightKeys is still running"
             unsupported -> status = "Paused: the firmware didn't take the light"
+            Prefs.preset(this) == LightRule.Preset.PhonesOwn -> status = "The phone's own key light"
             !screenOn -> status = "Off: screen off"
+            // Until the first reading, nothing changes: a restarted service doesn't blink a lit keyboard.
+            waiting -> {
+                wantLit = lit
+                wantLevel = applied?.startsWith("true") == true || applied?.split("/")?.getOrNull(1) == "true"
+                status = "Off: reading the light"
+            }
             else -> {
-                val dark = policy.shouldLight()
-                // Until the first reading, nothing changes: a restarted service doesn't blink a lit keyboard.
-                want = if (policy.reason() == LightPolicy.Reason.WAITING_FOR_SENSOR) lit else LightRule.lit(dark, screenOn, wantTyping, link, now, stayMillis)
+                if (source == LightRule.Source.InputFlag && dark) {
+                    poll = true
+                    val open = try { Shell.inputOpen() } catch (error: Exception) { fieldOpen }
+                    if (fieldOpen && !open) fieldClosedAt = now
+                    fieldOpen = open
+                }
+                wantLit = LightRule.lit(source, dark, screenOn, link, now, stayMillis, fieldOpen, fieldClosedAt)
+                wantLevel = wantLit || LightRule.firmwareLevelOn(source, dark, screenOn)
                 status = when {
-                    want && mode == LightRule.Mode.FollowsTitanKeys -> "Lit: dark and typing"
-                    want -> "Lit: dark and screen on"
-                    policy.reason() == LightPolicy.Reason.WAITING_FOR_SENSOR -> "Off: reading the light"
-                    !dark -> "Off: bright enough"
-                    else -> "Off: dark, not typing"
+                    !dark -> if (darkness == LightRule.Darkness(true, false, false, false)) "Off: bright enough" else "Off: not dark"
+                    source == LightRule.Source.FirmwareKeys -> "On while you press keys"
+                    wantLit -> when (source) {
+                        LightRule.Source.LinkTyping -> "Lit: typing"
+                        LightRule.Source.LinkField, LightRule.Source.InputFlag -> "Lit: text field open"
+                        else -> "Lit: dark and screen on"
+                    }
+                    source == LightRule.Source.LinkTyping -> "Off: not typing"
+                    else -> "Off: no text field open"
                 }
             }
         }
-        val ready = Shizuku.allowed() && !Installed.blocked(this, OldApps.Tool.Light)
-        if (want != lit) setLit(want)
-        else if (ready && SystemClock.elapsedRealtime() - vendorCheckedAt > VENDOR_CHECK_MILLIS) {
-            // In case the phone's own settings changed them: the firmware's key light settings, checked every minute.
-            vendorCheckedAt = SystemClock.elapsedRealtime()
-            level = LightRecovery.own(this, lit, level)
+
+        if (Prefs.preset(this) == LightRule.Preset.PhonesOwn && ready) {
+            // Hand the light back, as with the switch off.
+            if (!handedBack) {
+                if (lit) try { Shell.light(0) } catch (ignored: Exception) {}
+                lit = false
+                LightRecovery.release(this)
+                LightJournal.markOff(this)
+                handedBack = true
+                applied = null
+            }
+        } else if (ready && !status.startsWith("Paused")) {
+            handedBack = false
+            val timeout = if (source == LightRule.Source.FirmwareKeys) LightRule.firmwareTimeout(stayMillis).toString() else VendorKeys.OWNED_TIMEOUT
+            apply(wantLit, wantLevel, timeout)
         }
-        if (lit && screenOn && SystemClock.elapsedRealtime() - assertedAt >= ASSERT_MILLIS) {
+
+        if (lit && screenOn && ready && SystemClock.elapsedRealtime() - assertedAt >= ASSERT_MILLIS) {
             // A safety net only, as the firmware keeps the level itself. It also picks up a level set in the phone's own
             // settings, which Titan Tools then uses instead of taking turns with it.
             assertedAt = SystemClock.elapsedRealtime()
-            if (ready) level = LightRecovery.own(this, true, level)
+            level = LightRecovery.own(this, true, level)
             try { Shell.light(level) } catch (error: Exception) { Log.w(TAG, "Couldn't write the light again", error) }
         }
-        Status.light(if (want && !lit) "Paused: couldn't turn the light on" else status, mode == LightRule.Mode.FollowsTitanKeys)
+        Status.light(status, source == LightRule.Source.LinkTyping || source == LightRule.Source.LinkField)
         updateNotification(Status.lightText)
 
-        var next = LightRule.nextChange(wantTyping, link, now, stayMillis).let { if (it < 0) Long.MAX_VALUE else it - now }
+        var next = LightRule.nextChange(source, link, now, stayMillis, fieldClosedAt).let { if (it < 0) Long.MAX_VALUE else it - now }
         val deadline = policy.nextDeadline()
         if (deadline >= 0) next = minOf(next, deadline - SystemClock.elapsedRealtime())
+        if (poll) next = minOf(next, 1_000L)
         if (lit) next = minOf(next, ASSERT_MILLIS)
         else if (ready) next = minOf(next, VENDOR_CHECK_MILLIS)
+        // Night hours start and end by the clock.
+        if (darkness.nightHours) next = minOf(next, 60_000L)
         // While paused for Shizuku or NightKeys, look again now and then.
         if (status.startsWith("Paused")) next = minOf(next, 30_000L)
         if (next != Long.MAX_VALUE) worker.postDelayed(evaluate, next.coerceAtLeast(1))
     }
 
     /**
-     * Turns the light on at [level] or off: the firmware's own settings first (VendorKeys: its stored level, which it writes on
-     * every key press, and timeout -1), then one direct write so it changes at once.
+     * Sets Titan Tools' light: the firmware's own settings first (VendorKeys: its stored level, which it writes on every key
+     * press, the timeout and the automatic light off), then one direct write so it changes at once. Checked again every minute.
      */
-    private fun setLit(on: Boolean) {
+    private fun apply(wantLit: Boolean, wantLevel: Boolean, timeout: String) {
+        val key = "$wantLit/$wantLevel/$timeout"
+        val due = SystemClock.elapsedRealtime() - vendorCheckedAt > VENDOR_CHECK_MILLIS
+        if (key == applied && !due) return
         vendorCheckedAt = SystemClock.elapsedRealtime()
-        if (on) {
-            try {
-                LightJournal.markLit(this)
-                level = LightRecovery.own(this, true, level)
+        val levelWas = applied?.split("/")?.getOrNull(1) == "true"
+        try {
+            if (wantLevel) LightJournal.markLit(this)
+            level = LightRecovery.own(this, wantLevel, level, timeout)
+            if (wantLit && (!lit || key != applied)) {
                 if (!Shell.light(level)) {
                     // The firmware said no: this phone or firmware doesn't have the call. Never try to fight it.
                     unsupported = true
-                    LightRecovery.own(this, false, level)
+                    LightRecovery.own(this, false, level, timeout)
                     Shell.light(0)
                     LightJournal.markOff(this)
+                    lit = false
+                    applied = null
                     return
                 }
-                lit = true
                 assertedAt = SystemClock.elapsedRealtime()
-            } catch (error: Exception) {
-                Log.w(TAG, "Couldn't light the keyboard", error)
-                lit = true
-                setLit(false)
-            }
-        } else {
-            lit = false
-            try {
-                level = LightRecovery.own(this, false, level)
+            } else if (!wantLit && (lit || (levelWas && !wantLevel))) {
                 Shell.light(0)
-                LightJournal.markOff(this)
-            } catch (error: Exception) {
-                Log.w(TAG, "Couldn't turn the keyboard light off", error)
             }
+            lit = wantLit
+            if (!wantLevel) LightJournal.markOff(this)
+            applied = key
+        } catch (error: Exception) {
+            Log.w(TAG, "Couldn't set the keyboard light", error)
+            applied = null
         }
     }
 
     private fun shutDown() {
         unregisterSensor()
         worker.removeCallbacksAndMessages(null)
-        if (lit || LightJournal.lit(this)) {
-            lit = true
-            setLit(false)
-        }
+        if (lit || LightJournal.lit(this)) try { Shell.light(0) } catch (ignored: Exception) {}
+        lit = false
+        LightJournal.markOff(this)
         // The tool is off: the phone's own key light settings go back, and the firmware is in charge again.
         LightRecovery.release(this)
         Status.light("Off", false)
@@ -311,11 +364,13 @@ class LightService : Service(), SensorEventListener {
         try { unregisterReceiver(screenReceiver) } catch (ignored: Exception) {}
         unregisterSensor()
         worker.removeCallbacksAndMessages(null)
-        val wasLit = lit
         worker.post {
-            if (wasLit || LightJournal.lit(this)) {
-                lit = true
-                setLit(false)
+            if (lit || LightJournal.lit(this)) {
+                try {
+                    LightRecovery.own(this, false, level)
+                    Shell.light(0)
+                    LightJournal.markOff(this)
+                } catch (ignored: Exception) {}
             }
             thread.quitSafely()
         }

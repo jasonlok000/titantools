@@ -25,7 +25,7 @@ object Shell {
 
     /** Reads one of the firmware's key light settings (VendorKeys), or [VendorKeys.MISSING] when it has none. */
     fun readVendor(key: String): String? {
-        require(key == VendorKeys.TIMEOUT || key == VendorKeys.TIMEOUT_BACKUP || key == VendorKeys.LED)
+        require(key == VendorKeys.TIMEOUT || key == VendorKeys.TIMEOUT_BACKUP || key == VendorKeys.LED || key == VendorKeys.INTELLIGENT)
         val result = RemoteProcess.run(4_000, arrayOf(SERVICE, "call", "agui_common", "3", "s16", key, "s16", VendorKeys.MISSING))
         return VendorReply.string(result.out)
     }
@@ -35,13 +35,30 @@ object Shell {
      * check. Only checked numbers go in.
      */
     fun writeVendor(key: String, value: String): Boolean {
-        require(when (key) {
-            VendorKeys.TIMEOUT -> VendorKeys.validTimeout(value)
-            VendorKeys.LED -> VendorKeys.validLed(value)
-            else -> false
-        }) { "Not a key light setting" }
+        require(VendorKeys.valid(key, value)) { "Not a key light setting" }
         RemoteProcess.run(4_000, arrayOf(SERVICE, "call", "agui_common", "4", "s16", key, "s16", value.trim()))
         return readVendor(key) == value.trim()
+    }
+
+    /** Text field open: the phone's own flag, 1 while a keyboard is shown in a field (not with TitanKeys, which keeps it at 1). */
+    fun inputOpen(): Boolean = RemoteProcess.run(3_000, arrayOf("/system/bin/getprop", "debug.sf.agui_input_status")).out.trim() == "1"
+
+    /** Night mode's settings: Night Light, Extra dim and its strength. */
+    fun putSecure(name: String, value: Int) {
+        require((name in listOf("night_display_activated", "reduce_bright_colors_activated") && value in 0..1) ||
+            (name == "reduce_bright_colors_level" && value in 0..100)) { "Not a night mode setting" }
+        RemoteProcess.run(5_000, arrayOf("/system/bin/settings", "put", "secure", name, value.toString()))
+    }
+
+    /** Reads one of Night mode's secure settings, or null when it has none. */
+    fun getSecure(name: String): Int? {
+        require(name in listOf("night_display_activated", "reduce_bright_colors_activated", "reduce_bright_colors_level"))
+        return RemoteProcess.run(4_000, arrayOf("/system/bin/settings", "get", "secure", name)).out.trim().toIntOrNull()
+    }
+
+    /** Night mode's dark theme: "yes" or "no". */
+    fun uiNight(on: Boolean) {
+        RemoteProcess.run(5_000, arrayOf("/system/bin/cmd", "uimode", "night", if (on) "yes" else "no"))
     }
 
     /** Rotation: locks the screen at [rotation] (0 portrait, 1 landscape, 2 and 3 upside down), turning auto-rotate off. */

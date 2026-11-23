@@ -1,19 +1,20 @@
 package com.everyonesniche.titantools.light
 
 /**
- * When the keyboard light is on. All times are wall-clock milliseconds (System.currentTimeMillis), the clock TitanKeys stamps
- * its link messages with.
+ * When the keyboard light is on: "Light the keys when [darkness] and [activity]". Pure, so the checks can run it. Times are
+ * wall-clock milliseconds (System.currentTimeMillis), the clock TitanKeys stamps its link messages with.
  *
- * - "Dark and screen on" (the default): on while it's dark and the screen is on, as NightKeys did.
- * - "Dark and typing": follows TitanKeys over the link. On while it's dark and TitanKeys said typing within the last
- *   [stayMillis] (counted from its last message, typing or not: any "typing" relights at once). The link is alive while
- *   TitanKeys sent something in the last 10 minutes; when it goes quiet, the light falls back to "dark and screen on".
+ * Darkness, any of: a dark room (the light sensor), night hours, the phone's dark theme, or any time.
+ * Activity, one of:
+ * - Screen on.
+ * - Text field open: with TitanKeys as the keyboard, its link says when it's shown (TitanKeys keeps the phone's own input
+ *   flag at 1 everywhere, so the flag can't be used then); with any other keyboard, the phone's debug.sf.agui_input_status.
+ * - Typing: with TitanKeys as the keyboard and its link alive, its typing messages (keys and swipes); otherwise the
+ *   firmware's own key presses, which light the keys for the stay time by themselves (VendorKeys).
+ * Then the light stays on for the stay time after the activity ends. The screen off always means off.
  */
 object LightRule {
     const val LINK_FRESH_MILLIS = 10 * 60_000L
-    const val DEFAULT_STAY_MILLIS = 5_000L
-
-    enum class Mode { FollowsTitanKeys, DarkAndScreenOn }
 
     /** What TitanKeys last said. [lastAt] is 0 before any message. */
     data class Link(val lastAt: Long = 0, val typing: Boolean = false, val stoppedAt: Long = 0) {
@@ -30,25 +31,91 @@ object LightRule {
 
     fun alive(link: Link, now: Long): Boolean = link.lastAt > 0 && now >= link.lastAt && now - link.lastAt < LINK_FRESH_MILLIS
 
-    fun mode(wantTyping: Boolean, link: Link, now: Long): Mode =
-        if (wantTyping && alive(link, now)) Mode.FollowsTitanKeys else Mode.DarkAndScreenOn
+    data class Darkness(val darkRoom: Boolean, val nightHours: Boolean, val darkTheme: Boolean, val anyTime: Boolean)
 
-    /** TitanKeys said something less than [stayMillis] ago. */
-    fun typing(link: Link, now: Long, stayMillis: Long): Boolean = link.lastAt > 0 && now - link.lastAt in 0 until stayMillis
+    /** The facts the darkness choices are checked against. Minutes count from midnight. */
+    data class Facts(val roomDark: Boolean, val minuteOfDay: Int, val nightFrom: Int, val nightTo: Int, val themeDark: Boolean)
 
-    fun lit(dark: Boolean, screenOn: Boolean, wantTyping: Boolean, link: Link, now: Long, stayMillis: Long = DEFAULT_STAY_MILLIS): Boolean {
-        if (!dark || !screenOn) return false
-        return when (mode(wantTyping, link, now)) {
-            Mode.FollowsTitanKeys -> typing(link, now, stayMillis)
-            Mode.DarkAndScreenOn -> true
+    /** [minute] is in the hours from [from] to [to], which may run past midnight. Equal ends: never. */
+    fun inHours(minute: Int, from: Int, to: Int): Boolean = when {
+        from == to -> false
+        from < to -> minute in from until to
+        else -> minute >= from || minute < to
+    }
+
+    fun dark(d: Darkness, f: Facts): Boolean = d.anyTime || (d.darkRoom && f.roomDark) ||
+        (d.nightHours && inHours(f.minuteOfDay, f.nightFrom, f.nightTo)) || (d.darkTheme && f.themeDark)
+
+    enum class Activity(val id: String) {
+        Screen("screen"), Field("field"), Typing("typing");
+
+        companion object {
+            fun of(id: String?): Activity = entries.firstOrNull { it.id == id } ?: Screen
         }
     }
 
-    /** The next time the answer can change by itself (the stay ending or the link going quiet), or -1 for none. */
-    fun nextChange(wantTyping: Boolean, link: Link, now: Long, stayMillis: Long = DEFAULT_STAY_MILLIS): Long {
-        if (!wantTyping || !alive(link, now)) return -1
-        val quiet = link.lastAt + LINK_FRESH_MILLIS
-        val stay = link.lastAt + stayMillis
-        return if (stay > now) minOf(stay, quiet) else quiet
+    /** Where the activity is read from, given the keyboard and the link. */
+    enum class Source { Screen, LinkField, LinkTyping, InputFlag, FirmwareKeys }
+
+    fun source(activity: Activity, titanKeysKeyboard: Boolean, linkAlive: Boolean): Source = when (activity) {
+        Activity.Screen -> Source.Screen
+        // With TitanKeys, the link is the only way to know; while it's quiet, screen on.
+        Activity.Field -> if (!titanKeysKeyboard) Source.InputFlag else if (linkAlive) Source.LinkField else Source.Screen
+        Activity.Typing -> if (titanKeysKeyboard && linkAlive) Source.LinkTyping else Source.FirmwareKeys
+    }
+
+    /** The firmware lights on key presses for at least a second: the shortest stay it can do. */
+    const val FIRMWARE_MIN_STAY_MILLIS = 1000L
+
+    /**
+     * Titan Tools' own light is on. With [Source.FirmwareKeys] it never is: the firmware lights the keys on presses, and
+     * Titan Tools only gives it the level while it's dark ([firmwareLevelOn]). [fieldOpen] and [fieldClosedAt] are the input
+     * flag's reading and when it last went from open to closed.
+     */
+    fun lit(source: Source, dark: Boolean, screenOn: Boolean, link: Link, now: Long, stayMillis: Long,
+            fieldOpen: Boolean = false, fieldClosedAt: Long = 0): Boolean {
+        if (!dark || !screenOn) return false
+        return when (source) {
+            Source.Screen -> true
+            Source.LinkField -> link.typing || (link.stoppedAt > 0 && now - link.stoppedAt in 0 until stayMillis)
+            Source.LinkTyping -> (link.lastAt > 0 && now - link.lastAt in 0 until stayMillis) || (stayMillis == 0L && link.typing)
+            Source.InputFlag -> fieldOpen || (fieldClosedAt > 0 && now - fieldClosedAt in 0 until stayMillis)
+            Source.FirmwareKeys -> false
+        }
+    }
+
+    /** With the firmware lighting on key presses: it gets the level while it's dark and the screen is on, else 0. */
+    fun firmwareLevelOn(source: Source, dark: Boolean, screenOn: Boolean): Boolean = source == Source.FirmwareKeys && dark && screenOn
+
+    /** The firmware's timeout for key presses: the stay, at least a second. */
+    fun firmwareTimeout(stayMillis: Long): Long = maxOf(FIRMWARE_MIN_STAY_MILLIS, stayMillis)
+
+    /** The next time the answer can change by itself (a stay ending or the link going quiet), or -1 for none. */
+    fun nextChange(source: Source, link: Link, now: Long, stayMillis: Long, fieldClosedAt: Long = 0): Long {
+        val times = mutableListOf<Long>()
+        if (link.lastAt > 0) times += link.lastAt + LINK_FRESH_MILLIS
+        when (source) {
+            Source.LinkTyping -> times += link.lastAt + stayMillis
+            Source.LinkField -> if (link.stoppedAt > 0) times += link.stoppedAt + stayMillis
+            Source.InputFlag -> if (fieldClosedAt > 0) times += fieldClosedAt + stayMillis
+            else -> Unit
+        }
+        return times.filter { it > now }.minOrNull() ?: -1
+    }
+
+    /** The light screen's presets. "Phone's own" hands the light back; "Custom" keeps the lists as they are. */
+    enum class Preset(val id: String) {
+        NightTyping("night_typing"), AlwaysInTheDark("always_dark"), PhonesOwn("phone"), Custom("custom");
+
+        companion object {
+            fun of(id: String?): Preset = entries.firstOrNull { it.id == id } ?: AlwaysInTheDark
+        }
+    }
+
+    /** The darkness and activity a preset sets, or null for one that sets none. */
+    fun presetLists(preset: Preset): Pair<Darkness, Activity>? = when (preset) {
+        Preset.NightTyping -> Darkness(darkRoom = true, nightHours = false, darkTheme = false, anyTime = false) to Activity.Typing
+        Preset.AlwaysInTheDark -> Darkness(darkRoom = true, nightHours = false, darkTheme = false, anyTime = false) to Activity.Screen
+        Preset.PhonesOwn, Preset.Custom -> null
     }
 }
