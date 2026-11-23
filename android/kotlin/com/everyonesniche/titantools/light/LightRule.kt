@@ -25,7 +25,7 @@ object LightRule {
             return Link(time, typing, if (typing) 0 else time)
         }
 
-        /** TitanKeys has sent at least one message: it has the link (3.1 or later). */
+        /** TitanKeys has sent at least one message: it has the link. */
         val seen: Boolean get() = lastAt > 0
     }
 

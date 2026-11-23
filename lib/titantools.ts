@@ -19,7 +19,7 @@ export type State = {
     staySeconds: number;
     /** TitanKeys is the keyboard; Typing falls back to the firmware's key presses (no 0-second stay then). */
     titanKeysKeyboard: boolean; keyPresses: boolean;
-    /** TitanKeys has sent a typing message (3.1 or later), and sent one in the last 10 minutes. */
+    /** TitanKeys has sent a typing message, and sent one in the last 10 minutes. */
     linkSeen: boolean; linkAlive: boolean;
   };
   scale: { on: boolean; status: string; phoneDpi: number; tabletDpi: number };

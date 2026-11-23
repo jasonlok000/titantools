@@ -49,7 +49,7 @@ export default function Home() {
     <Section title="TitanKeys">
       {s.titanKeys.installed
         ? <>
-          <Note>TitanKeys is installed. With TitanKeys 3.1 or later as your keyboard, the light can follow your typing.</Note>
+          <Note>TitanKeys is installed. With TitanKeys as your keyboard, the light can follow your typing.</Note>
           <Field label="Open TitanKeys" onPress={() => void open("titanKeysApp")}>{""}</Field>
         </>
         : <>

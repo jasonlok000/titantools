@@ -44,8 +44,10 @@ export default function Light() {
     </Section>}
     {custom && <Section title="And">
       <SettingsChoices<LightActivity> value={light.activity} options={activities} onChange={value => void set("light_activity", value)} />
-      {light.activity === "typing" && light.keyPresses &&
-        <Note>Without the TitanKeys link (TitanKeys 3.1 as your keyboard), key presses light the keys.</Note>}
+      {light.activity !== "screen" && light.titanKeysKeyboard && !light.linkSeen &&
+        <Note>Waiting for TitanKeys: type something with it.</Note>}
+      {light.activity === "typing" && light.keyPresses && !(light.titanKeysKeyboard && !light.linkSeen) &&
+        <Note>Without TitanKeys as your keyboard, key presses light the keys.</Note>}
     </Section>}
     {light.preset !== "phone" && light.activity !== "screen" && <Section title="Stay lit after">
       <SettingsChoices value={String(stay)} options={stays.map(s => ({ value: String(s), label: `${s} seconds` }))}

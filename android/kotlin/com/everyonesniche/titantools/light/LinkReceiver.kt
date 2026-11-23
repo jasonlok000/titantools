@@ -6,7 +6,7 @@ import android.content.Intent
 import com.everyonesniche.titantools.core.Link
 
 /**
- * The link with TitanKeys (3.1 and later). TitanKeys sends com.everyonesniche.titantools.action.TYPING to this package with a
+ * The link with TitanKeys. TitanKeys sends com.everyonesniche.titantools.action.TYPING to this package with a
  * boolean "typing" and a long "at" (System.currentTimeMillis). Only an app signed with the same key can send it: the receiver
  * needs com.everyonesniche.titantools.permission.LINK, a signature permission both apps declare.
  */
