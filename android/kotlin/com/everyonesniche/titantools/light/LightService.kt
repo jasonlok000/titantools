@@ -212,11 +212,7 @@ class LightService : Service(), SensorEventListener {
             Prefs.preset(this) == LightRule.Preset.PhonesOwn -> status = "The phone's own key light"
             !screenOn -> status = "Off: screen off"
             // Until the first reading, nothing changes: a restarted service doesn't blink a lit keyboard.
-            waiting -> {
-                wantLit = lit
-                wantLevel = applied?.startsWith("true") == true || applied?.split("/")?.getOrNull(1) == "true"
-                status = "Off: reading the light"
-            }
+            waiting -> status = if (lit) "Lit: reading the light" else "Off: reading the light"
             else -> {
                 if (source == LightRule.Source.InputFlag && dark) {
                     poll = true
@@ -250,7 +246,7 @@ class LightService : Service(), SensorEventListener {
                 handedBack = true
                 applied = null
             }
-        } else if (ready && !status.startsWith("Paused")) {
+        } else if (ready && !status.startsWith("Paused") && !waiting) {
             handedBack = false
             val timeout = if (source == LightRule.Source.FirmwareKeys) LightRule.firmwareTimeout(stayMillis).toString() else VendorKeys.OWNED_TIMEOUT
             apply(wantLit, wantLevel, timeout)
