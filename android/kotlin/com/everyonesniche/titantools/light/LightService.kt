@@ -81,6 +81,8 @@ class LightService : Service(), SensorEventListener {
             Link.listen { worker.post(evaluate) },
         )
         worker.post {
+            // The firmware's settings are checked after the first light reading, not before it.
+            vendorCheckedAt = SystemClock.elapsedRealtime()
             rebuildPolicy()
             screenChanged()
         }
@@ -175,7 +177,8 @@ class LightService : Service(), SensorEventListener {
             !screenOn -> status = "Off: screen off"
             else -> {
                 val dark = policy.shouldLight()
-                want = LightRule.lit(dark, screenOn, link, now)
+                // Until the first reading, nothing changes: a restarted service doesn't blink a lit keyboard.
+                want = if (policy.reason() == LightPolicy.Reason.WAITING_FOR_SENSOR) lit else LightRule.lit(dark, screenOn, link, now)
                 status = when {
                     want && mode == LightRule.Mode.FollowsTitanKeys -> "Lit: dark and typing"
                     want -> "Lit: dark and screen on"
