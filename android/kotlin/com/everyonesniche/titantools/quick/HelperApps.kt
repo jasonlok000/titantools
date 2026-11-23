@@ -16,12 +16,12 @@ object HelperApps {
     data class Helper(val packageName: String, val label: String, val asset: String)
 
     val all: List<Helper> = listOf(
-        Helper("com.everyonesniche.titantools.layout", "Switch layout", "layout"),
-        Helper("com.everyonesniche.titantools.rotate", "Rotate", "rotate"),
-        Helper("com.everyonesniche.titantools.flashlight", "Flashlight", "flashlight"),
-        Helper("com.everyonesniche.titantools.night", "Night mode", "night"),
-        Helper("com.everyonesniche.titantools.playpause", "Play/Pause", "playpause"),
-    ) + (1..WidgetList.SLOTS).map { Helper("com.everyonesniche.titantools.widget$it", "Widget $it", "widget$it") }
+        Helper("com.everyonesniche.titantools.layout", "TT - Switch layout", "layout"),
+        Helper("com.everyonesniche.titantools.rotate", "TT - Rotate", "rotate"),
+        Helper("com.everyonesniche.titantools.flashlight", "TT - Flashlight", "flashlight"),
+        Helper("com.everyonesniche.titantools.night", "TT - Night mode", "night"),
+        Helper("com.everyonesniche.titantools.playpause", "TT - Play/Pause", "playpause"),
+    ) + (1..WidgetList.SLOTS).map { Helper("com.everyonesniche.titantools.widget$it", "TT - Widget $it", "widget$it") }
 
     fun installed(context: Context, helper: Helper): Boolean = try {
         context.packageManager.getPackageInfo(helper.packageName, 0)

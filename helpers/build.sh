@@ -42,7 +42,7 @@ while IFS='|' read -r id label action slot icon; do
 MEOF
   "$BT/aapt2" compile --dir "$d/res" -o "$d/res.zip"
   "$BT/aapt2" link -I "$JAR" --manifest "$d/AndroidManifest.xml" -o "$d/base.apk" "$d/res.zip" \
-    --min-sdk-version 34 --target-sdk-version 36 --version-code 1 --version-name 1.0.0
+    --min-sdk-version 34 --target-sdk-version 36 --version-code 2 --version-name 1.0.0
   cp "$W/dex/classes.dex" "$d/classes.dex"
   (cd "$d" && zip -q base.apk classes.dex)
   "$BT/zipalign" -f -p 4 "$d/base.apk" "$d/aligned.apk"
@@ -50,14 +50,14 @@ MEOF
     --ks-pass env:INK_KEYSTORE_PASSWORD --key-pass env:INK_KEY_PASSWORD --out "$OUT/$id.apk" "$d/aligned.apk"
   echo "helper $id.apk"
 done <<LIST
-layout|Switch layout|layout|0|scale_toggle_foreground
-rotate|Rotate|rotate|0|rotate_foreground
-flashlight|Flashlight|flashlight|0|flashlight_foreground
-night|Night mode|night|0|night_foreground
-playpause|Play/Pause|playpause|0|play_foreground
-widget1|Widget 1|widget|1|widget_foreground
-widget2|Widget 2|widget|2|widget_foreground
-widget3|Widget 3|widget|3|widget_foreground
-widget4|Widget 4|widget|4|widget_foreground
-widget5|Widget 5|widget|5|widget_foreground
+layout|TT - Switch layout|layout|0|scale_toggle_foreground
+rotate|TT - Rotate|rotate|0|rotate_foreground
+flashlight|TT - Flashlight|flashlight|0|flashlight_foreground
+night|TT - Night mode|night|0|night_foreground
+playpause|TT - Play/Pause|playpause|0|play_foreground
+widget1|TT - Widget 1|widget|1|widget_foreground
+widget2|TT - Widget 2|widget|2|widget_foreground
+widget3|TT - Widget 3|widget|3|widget_foreground
+widget4|TT - Widget 4|widget|4|widget_foreground
+widget5|TT - Widget 5|widget|5|widget_foreground
 LIST
