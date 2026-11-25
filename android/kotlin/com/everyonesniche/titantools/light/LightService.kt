@@ -252,6 +252,7 @@ class LightService : Service(), SensorEventListener {
         if (seenLinkAt >= 0 && link.lastAt != seenLinkAt) trigger = when {
             !link.typing -> trigger ?: "TitanKeys-stopped"
             link.typedAt == link.lastAt -> "TitanKeys-TYPING"
+            link.homeAt == link.lastAt -> "TitanKeys-home"
             else -> "TitanKeys-field"
         }
         seenLinkAt = link.lastAt
@@ -372,7 +373,8 @@ class LightService : Service(), SensorEventListener {
             lit -> LightLog.write("trigger $what", "lit")
             what == "TitanKeys-stopped" -> Unit
             // A field opening isn't typing: in Typing mode it's meant to stay off.
-            what == "TitanKeys-field" && source == LightRule.Source.LinkTyping -> LightLog.write("trigger $what", "off: a field opened, not typing")
+            (what == "TitanKeys-field" || what == "TitanKeys-home") && source == LightRule.Source.LinkTyping ->
+                LightLog.write("trigger $what", if (what == "TitanKeys-home") "off: the home screen's empty search, not typing" else "off: a field opened, not typing")
             source == LightRule.Source.FirmwareKeys && wantLevel -> LightLog.write("trigger $what", "firmware lights on keys at level $level")
             // Not dark or the screen off: off as meant, but still noted with the reason, in case the reading was wrong.
             !dark || !screenOn -> LightLog.write("trigger $what", "off: $details")
