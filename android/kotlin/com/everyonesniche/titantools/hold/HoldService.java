@@ -225,7 +225,9 @@ public final class HoldService extends AccessibilityService
         // A text field is connected: input started for a text class field (TYPE_NULL and fallback connections don't count).
         // TitanKeys' TYPING messages aren't used: TitanKeys sends one for every key it gets, including the clicks Titan Tools
         // lets through or sends again, so they made holds stand down in apps with no field at all.
-        return editorActive && lastInputType != InputType.TYPE_NULL && input != null && input.getCurrentInputStarted();
+        boolean field = editorActive && lastInputType != InputType.TYPE_NULL && input != null && input.getCurrentInputStarted();
+        // The launcher's empty search box (TitanKeys' kind "home") isn't typing, until something is typed in it.
+        return field && !com.everyonesniche.titantools.core.Link.INSTANCE.current(this).getOnHome();
     }
 
     /** The facts behind a key action decision, for the log. Never which letter. */
@@ -236,7 +238,7 @@ public final class HoldService extends AccessibilityService
         return "key=" + (e.isPrintingKey() ? "letter" : KeyEvent.keyCodeToString(key))
                 + " field=" + (editorActive ? "text" : "none") + " inputType=0x" + Integer.toHexString(lastInputType)
                 + " started=" + (input != null && input.getCurrentInputStarted())
-                + " titanKeysTyped=" + typed + (link.getTypedAt() == link.getLastAt() ? "" : " (last was a field opening)")
+                + " titanKeysTyped=" + typed + " home=" + link.getOnHome() + (link.getTypedAt() == link.getLastAt() ? "" : " (last was a field opening)")
                 + " shizuku=" + KeyInjector.INSTANCE.ready() + " screen=" + screenUsable + " hold=" + remapHold + "ms";
     }
 

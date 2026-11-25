@@ -94,6 +94,10 @@ private fun lightRule() {
     check("a field opening doesn't light Typing", !LightRule.lit(LightRule.Source.LinkTyping, true, true, opened, now, 2000))
     check("a field opening lights Text field open", LightRule.lit(LightRule.Source.LinkField, true, true, opened, now, 2000))
     check("kind typing lights Typing", LightRule.lit(LightRule.Source.LinkTyping, true, true, opened.after(true, now, now, "typing"), now, 2000))
+    val home = none.after(true, now - 500, now, "home")
+    check("the launcher's empty search is home", home.onHome && !LightRule.lit(LightRule.Source.LinkTyping, true, true, home, now, 2000))
+    check("typing in it ends home", !home.after(true, now, now, "typing").onHome)
+    check("a plain field isn't home", !opened.onHome)
     check("no kind (older TitanKeys) still lights Typing", LightRule.lit(LightRule.Source.LinkTyping, true, true, none.after(true, now - 500, now), now, 2000))
     check("while typing: any light", LightRule.presetLists(LightRule.Preset.Typing)?.second == LightRule.Activity.Typing &&
         LightRule.presetLists(LightRule.Preset.Typing)?.first?.anyTime == true)

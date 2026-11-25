@@ -20,13 +20,13 @@ object Link {
         val next = current(context).after(typing, at, System.currentTimeMillis(), kind)
         link = next
         context.getSharedPreferences("link", Context.MODE_PRIVATE).edit()
-            .putLong("last_at", next.lastAt).putBoolean("typing", next.typing).putLong("stopped_at", next.stoppedAt).putLong("typed_at", next.typedAt).apply()
+            .putLong("last_at", next.lastAt).putBoolean("typing", next.typing).putLong("stopped_at", next.stoppedAt).putLong("typed_at", next.typedAt).putLong("home_at", next.homeAt).apply()
         listeners.forEach { it() }
     }
 
     private fun load(context: Context): LightRule.Link {
         val p = context.getSharedPreferences("link", Context.MODE_PRIVATE)
         val lastAt = p.getLong("last_at", 0)
-        return LightRule.Link(lastAt, p.getBoolean("typing", false), p.getLong("stopped_at", 0), p.getLong("typed_at", lastAt))
+        return LightRule.Link(lastAt, p.getBoolean("typing", false), p.getLong("stopped_at", 0), p.getLong("typed_at", lastAt), p.getLong("home_at", 0))
     }
 }

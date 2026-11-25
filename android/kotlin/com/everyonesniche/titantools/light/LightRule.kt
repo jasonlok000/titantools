@@ -21,19 +21,28 @@ object LightRule {
      * swipe or a touchpad touch): newer TitanKeys says kind "field" when a field only opened, which Typing ignores. Older
      * TitanKeys sends no kind, and every message counts as typing, as before.
      */
-    data class Link(val lastAt: Long = 0, val typing: Boolean = false, val stoppedAt: Long = 0, val typedAt: Long = lastAt) {
+    data class Link(val lastAt: Long = 0, val typing: Boolean = false, val stoppedAt: Long = 0, val typedAt: Long = lastAt,
+                    val homeAt: Long = 0) {
         /** The link after TitanKeys says [typing] at [at], seen at [now]. A message older than the last one is ignored. */
         fun after(typing: Boolean, at: Long, now: Long, kind: String? = null): Link {
             val time = if (at <= 0 || at > now) now else at
             if (time < lastAt) return this
-            return Link(time, typing, if (typing) 0 else time, if (typing && kind != KIND_FIELD) time else typedAt)
+            val real = typing && kind != KIND_FIELD && kind != KIND_HOME
+            return Link(time, typing, if (typing) 0 else time, if (real) time else typedAt, if (kind == KIND_HOME) time else homeAt)
         }
+
+        /**
+         * The field is the home launcher's own empty search box (TitanKeys says kind "home"), and nothing has been typed in it
+         * since: keys for actions still work there.
+         */
+        val onHome: Boolean get() = homeAt > 0 && homeAt >= typedAt
 
         /** TitanKeys has sent at least one message: it has the link. */
         val seen: Boolean get() = lastAt > 0
     }
 
     const val KIND_FIELD = "field"
+    const val KIND_HOME = "home"
 
     fun alive(link: Link, now: Long): Boolean = link.lastAt > 0 && now >= link.lastAt && now - link.lastAt < LINK_FRESH_MILLIS
 
