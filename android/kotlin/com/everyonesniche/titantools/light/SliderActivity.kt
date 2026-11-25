@@ -66,6 +66,8 @@ class SliderActivity : Activity() {
         layout.addView(done, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
             .apply { gravity = Gravity.END; topMargin = pad / 2 })
         setContentView(layout)
+        // Full width (a dialog is narrow by default), so the bar is easy to drag.
+        window.setLayout(android.view.WindowManager.LayoutParams.MATCH_PARENT, android.view.WindowManager.LayoutParams.WRAP_CONTENT)
         setTitle(if (brightness) "Brightness" else "Dark room below")
 
         if (brightness) {
