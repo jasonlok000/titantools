@@ -117,7 +117,7 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
         updateOffered = true
         android.app.AlertDialog.Builder(activity)
             .setTitle("Titan Tools ${release.version} is out")
-            .setMessage("Titan Tools doesn't update by itself. Get it opens the release page, where you can download it.")
+            .setMessage("Titan Tools doesn't update itself. Get it opens the release page, where you download the new one.")
             .setPositiveButton("Get it") { _, _ ->
                 try { activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(release.url))) } catch (ignored: Exception) {}
             }
@@ -156,7 +156,7 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
                 try {
                     complete(NativeResult.Success(state().toString()))
                 } catch (error: Exception) {
-                    complete(NativeResult.Failure(NativeErrorKind.UNEXPECTED, error.message ?: "Couldn't read the state", true))
+                    complete(NativeResult.Failure(NativeErrorKind.UNEXPECTED, error.message ?: "Couldn't load your settings", true))
                 }
             }
             // The apps a hold can open: every launchable app, by label.
@@ -170,7 +170,7 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
                     apps.forEach { (pkg, label) -> list.put(JSONObject().put("id", "app:$pkg").put("label", label)) }
                     complete(NativeResult.Success(list.toString()))
                 } catch (error: Exception) {
-                    complete(NativeResult.Failure(NativeErrorKind.UNEXPECTED, error.message ?: "Couldn't list the apps", true))
+                    complete(NativeResult.Failure(NativeErrorKind.UNEXPECTED, error.message ?: "Couldn't load your apps", true))
                 }
             }
             else -> try {
@@ -357,7 +357,7 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
         val lightOn = prefs.getBoolean(Prefs.LIGHT_ON, false)
         val lightStatus = when {
             !lightOn -> "Off"
-            LightService.instance == null -> shizukuPause ?: "Starting"
+            LightService.instance == null -> shizukuPause ?: "Starting…"
             else -> Status.lightText
         }
 
@@ -372,8 +372,8 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
         val accessibility = holdServiceOn()
         val holdStatus = when {
             !holdOn -> "Off"
-            HoldPause.pausedFor(defaultIme) -> "Paused: TitanKeys does holds"
-            Installed.oldRunning(activity, OldApps.of(OldApps.Tool.Hold)) -> "Paused: the old Hold Symbols is still on"
+            HoldPause.pausedFor(defaultIme) -> "Paused: TitanKeys does holds itself"
+            Installed.oldRunning(activity, OldApps.of(OldApps.Tool.Hold)) -> "Paused: the old Hold Symbols app is still on"
             shizukuPause != null -> shizukuPause
             !accessibility -> "Paused: turn it on in Accessibility"
             else -> HoldService.live?.pauseReason() ?: "On: hold a letter for its symbol"

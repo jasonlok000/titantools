@@ -3,20 +3,25 @@
  * own shows the newest entry at or below it. Add one for every build handed out.
  */
 const notes: Record<number, string[]> = {
+  42: [
+    "Clearer words all through Titan Tools.",
+    "Keys for actions also leave number, phone and date boxes alone.",
+    "Keyboard light: a room right at your dark setting now counts as dark.",
+  ],
   41: [
-    "Hold a letter for an action, on the home screen and in apps. With Shizuku the letter never types.",
-    "Every action says what it did, like Flashlight on or Portrait, and feels different for on and off.",
+    "Hold a letter for an action, on the home screen or in apps. With Shizuku, the letter doesn't type.",
+    "Every action tells you what it did, like Flashlight on or Portrait, and on and off buzz differently.",
     "Scale Toggle: pick a preset size or type your own.",
   ],
   29: [
-    "Keys for actions: hold a letter to open an app or run an action, like Key Mapper.",
-    "Keyboard light: new modes, In the dark while a text box is open, and While typing (or swiping). Typing now means keys and swipes, not a box opening.",
-    "A new version now also shows a message when you open Titan Tools.",
+    "Keys for actions: hold a letter to open an app or run an action.",
+    "Keyboard light: two new choices, In the dark while a text box is open, and While typing (or swiping). Typing now means pressing or swiping, not just a text box opening.",
+    "A new version now also shows up when you open Titan Tools.",
   ],
   23: [
-    "Update notices: Titan Tools now looks for new versions and tells you, with a link to the release page.",
-    "Keyboard light: brightness and dark room are in percent; tap one to slide it, and brightness lights the keys so you can see it.",
-    "Keyboard light: shows how light your room is right now, and every choice says when the keys light.",
+    "Update notices: Titan Tools now checks for new versions and tells you, with a link to the release page.",
+    "Keyboard light: brightness and dark room are in percent now. Tap one to slide it, and brightness lights the keys as you go.",
+    "Keyboard light: shows how bright your room is right now, and every choice says when the keys light.",
   ],
 };
 

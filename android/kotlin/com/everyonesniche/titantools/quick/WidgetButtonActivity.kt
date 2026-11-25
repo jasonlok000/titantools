@@ -32,7 +32,7 @@ class WidgetButtonActivity : Activity() {
         val list = WidgetButton.all(this)
         val slot = intent.getIntExtra(EXTRA_SLOT, 0)
         val picked = if (slot > 0) WidgetList.forSlot(list, slot) else list.firstOrNull { it.id == intent.getStringExtra(EXTRA_ENTRY) }
-        if (picked == null) return close(if (slot > 0) "Nothing is in Widget $slot. Pick one in Titan Tools." else "Pick the widget again in Titan Tools.")
+        if (picked == null) return close(if (slot > 0) "Widget $slot is empty. Pick a button in Titan Tools." else "Pick the widget again in Titan Tools.")
         entry = picked
         val info = WidgetButton.info(this, picked) ?: return close("Pick the widget again in Titan Tools.")
         host.startListening()

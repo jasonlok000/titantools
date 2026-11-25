@@ -14,22 +14,22 @@ export default function Home() {
   const needsSetup = !ready(s) && !stopped;
   const shortcuts = shortcutsOn(s);
   const news = s.updates.whatsNew ? whatsNew(s.updates.whatsNew) : [];
-  return <Screen title="Titan Tools" subtitle="Small tools for the Titan 2 Elite. Turn on the ones you want.">
+  return <Screen title="Titan Tools" subtitle="Small tools for the Titan 2 Elite. Turn on what you want.">
     {s.updates.available && <Section title="Update available">
       <Field label={`Titan Tools ${s.updates.available} is out`} onPress={() => void openUpdate()}>Get it</Field>
-      <Note>Titan Tools doesn't update by itself. Get it opens the release page; download and install it there.</Note>
+      <Note>Titan Tools doesn't update itself. Get it opens the release page, where you download the new one.</Note>
     </Section>}
     {news.length > 0 && <Section title={`New in Titan Tools ${s.version}`}>
       {news.map(line => <Note key={line}>{line}</Note>)}
       <Field label="Got it" onPress={() => void seenWhatsNew()}>{""}</Field>
     </Section>}
     {stopped && <Section title="Shizuku stopped">
-      <Note>Shizuku stops when the phone restarts. Start it again and your tools carry on.</Note>
+      <Note>Shizuku stops whenever the phone restarts. Start it again and your tools pick up where they were.</Note>
       <Field label="Start Shizuku again" onPress={() => void open("shizukuApp")}>{""}</Field>
     </Section>}
     {needsSetup && <Section title="Setup">
       <Field label="Set up Titan Tools" href="/setup">To do</Field>
-      <Note>Three quick steps with Shizuku, the app that lets Titan Tools change the light, the screen and keys.</Note>
+      <Note>Three quick steps with Shizuku, the app that lets Titan Tools change the key light, the screen and the keys.</Note>
     </Section>}
 
     <Section title="Keyboard light">
@@ -56,24 +56,31 @@ export default function Home() {
     </Section>
 
     {s.oldApps.length > 0 && <Section title="Remove the old apps">
-      <Note>Titan Tools does what these did. Remove them so the two never run at once. Your keyboard light setting is put back first.</Note>
+      <Note>Titan Tools does what these did, so you can remove them. Two of the same tool fight each other. Your phone's key light setting is put back first.</Note>
       {s.oldApps.map(app => <Field key={app.packageName} label={`Remove ${app.name}`}
         onPress={() => void uninstall(app.packageName)}>{app.running ? "Running" : ""}</Field>)}
     </Section>}
 
     <Section title="TitanKeys">
-      {s.titanKeys.installed
+      {s.titanKeys.installed && s.titanKeys.selected && s.light.linkAlive
         ? <>
-          <Note>TitanKeys is installed. With TitanKeys as your keyboard, the light can follow your typing.</Note>
+          <Note>Working with TitanKeys. TitanKeys tells Titan Tools when you're typing, so the key light can come on only then, and hold-a-letter actions don't fire while you type.</Note>
+          <Field label="Open TitanKeys" onPress={() => void open("titanKeysApp")}>{""}</Field>
+        </>
+        : s.titanKeys.installed
+        ? <>
+          <Note>{s.titanKeys.selected
+            ? "TitanKeys is your keyboard. Type something with it and it links up, so the key light can come on only while you type, and hold-a-letter actions don't fire while you type."
+            : "TitanKeys isn't your keyboard. Switch to it and the key light can come on only while you type, and hold-a-letter actions don't fire while you type."}</Note>
           <Field label="Open TitanKeys" onPress={() => void open("titanKeysApp")}>{""}</Field>
         </>
         : <>
-          <Note>A keyboard made for the Titan 2 Elite: swipe on the keys, hold for symbols, typos fixed as you go.</Note>
-          <Field label="Get TitanKeys" onPress={() => void open("titanKeysPage")}>{""}</Field>
+          <Note>TitanKeys isn't installed. A keyboard made for the Titan 2 Elite. With it, the key light can come on only while you type, and hold-a-letter actions don't fire while you type.</Note>
+          <Field label="Get it on Google Play" onPress={() => void open("titanKeysPage")}>{""}</Field>
         </>}
     </Section>
     <Section title="Updates">
-      <Toggle label="Check for updates" subtitle="Every 3 hours, and when you open Titan Tools. A notification once a day while a new version is out."
+      <Toggle label="Check for updates" subtitle="Every 3 hours, and whenever you open Titan Tools. While a new version is out, you get one notification a day."
         value={s.updates.on} onChange={on => void set("updates_on", on)} />
     </Section>
     <Note align="center">{`Titan Tools ${s.version}`}</Note>

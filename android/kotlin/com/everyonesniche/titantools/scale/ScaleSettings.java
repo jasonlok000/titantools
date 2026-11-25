@@ -17,15 +17,15 @@ public final class ScaleSettings {
         if (range != null) return range;
         int phone = phoneDpi > 0 ? phoneDpi : ScaleMath.PHONE_DENSITY;
         int tablet = tabletDpi > 0 ? tabletDpi : ScaleMath.TABLET_DENSITY;
-        if (tablet >= phone) return "Tablet mode needs a lower DPI than phone mode (" + phone + ").";
+        if (tablet >= phone) return "Tablet layout needs a lower DPI than phone layout (" + phone + ").";
         return null;
     }
 
     private static String rangeProblem(int phoneDpi, int tabletDpi) {
         if (phoneDpi != 0 && (phoneDpi < MIN_DPI || phoneDpi > MAX_DPI))
-            return "Phone mode DPI must be between " + MIN_DPI + " and " + MAX_DPI + ".";
+            return "Phone layout DPI must be between " + MIN_DPI + " and " + MAX_DPI + ".";
         if (tabletDpi != 0 && (tabletDpi < MIN_DPI || tabletDpi > MAX_DPI))
-            return "Tablet mode DPI must be between " + MIN_DPI + " and " + MAX_DPI + ".";
+            return "Tablet layout DPI must be between " + MIN_DPI + " and " + MAX_DPI + ".";
         return null;
     }
 

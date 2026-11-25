@@ -41,7 +41,7 @@ export default function RemapKey() {
   return <Screen title={`Hold ${k.name}`} subtitle={k.hold?.label ?? "Nothing yet"}>
     <Section title="Action">
       <SettingsChoices value={current} options={options} onChange={pick} />
-      <Note>Wi-Fi, Bluetooth and mobile data can't be switched directly without Shizuku: Quick settings opens them.</Note>
+      <Note>Titan Tools can't switch Wi-Fi, Bluetooth or mobile data directly, so this opens Quick settings instead.</Note>
     </Section>
     <Section title="Open an app">
       {apps.length === 0 ? <Note>Loading the apps…</Note>

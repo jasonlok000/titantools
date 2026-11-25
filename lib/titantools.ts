@@ -95,7 +95,7 @@ export const shizukuStopped = (s: State) => s.shizuku.installed && s.shizuku.eve
 
 const presetNames: Record<LightPreset, string> = {
   night_typing: "In the dark, while typing (or swiping)", dark_field: "In the dark, while a text box is open", typing: "While typing (or swiping)",
-  always_dark: "In the dark, always", phone: "Phone's own", custom: "Custom",
+  always_dark: "In the dark", phone: "Phone's own", custom: "Custom",
 };
 export const presetName = (preset: LightPreset) => presetNames[preset];
 

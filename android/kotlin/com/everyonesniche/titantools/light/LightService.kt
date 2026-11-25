@@ -91,7 +91,7 @@ class LightService : Service(), SensorEventListener {
         instance = this
         LightLog.init(this)
         LightLog.write("service start")
-        startForeground(NOTIFICATION, notification("Starting"), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+        startForeground(NOTIFICATION, notification("Starting…"), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
         thread = HandlerThread("titantools-light").apply { start() }
         worker = Handler(thread.looper)
         sensors = getSystemService(SensorManager::class.java)
@@ -275,11 +275,11 @@ class LightService : Service(), SensorEventListener {
             !Shizuku.running() -> status = if (Shizuku.installed(this)) "Paused: start Shizuku" else "Paused: Shizuku isn't installed"
             !Shizuku.allowed() -> status = "Paused: allow Titan Tools in Shizuku"
             Installed.blocked(this, OldApps.Tool.Light) -> status = "Paused: NightKeys is still running"
-            unsupported -> status = "Paused: the firmware didn't take the light"
+            unsupported -> status = "Paused: the phone wouldn't take the light"
             Prefs.preset(this) == LightRule.Preset.PhonesOwn -> status = "The phone's own key light"
-            !screenOn -> status = "Off: screen off"
+            !screenOn -> status = "Off: screen is off"
             // Until the first reading, nothing changes: a restarted service doesn't blink a lit keyboard.
-            waiting -> status = if (lit) "Lit: reading the light" else "Off: reading the light"
+            waiting -> status = if (lit) "Lit: checking the room" else "Off: checking the room"
             else -> {
                 if (source == LightRule.Source.InputFlag && dark) {
                     poll = true
@@ -290,15 +290,15 @@ class LightService : Service(), SensorEventListener {
                 wantLit = LightRule.lit(source, dark, screenOn, link, now, stayMillis, fieldOpen, fieldClosedAt)
                 wantLevel = wantLit || LightRule.firmwareLevelOn(source, dark, screenOn)
                 status = when {
-                    !dark -> if (darkness == LightRule.Darkness(true, false, false, false)) "Off: bright enough" else "Off: not dark"
-                    source == LightRule.Source.FirmwareKeys -> "On while you press keys"
+                    !dark -> if (darkness == LightRule.Darkness(true, false, false, false)) "Off: bright enough" else "Off: not dark right now"
+                    source == LightRule.Source.FirmwareKeys -> "Lit while you press keys"
                     wantLit -> when (source) {
                         LightRule.Source.LinkTyping -> "Lit: typing"
-                        LightRule.Source.LinkField, LightRule.Source.InputFlag -> "Lit: text field open"
+                        LightRule.Source.LinkField, LightRule.Source.InputFlag -> "Lit: text box open"
                         else -> "Lit: dark and screen on"
                     }
                     source == LightRule.Source.LinkTyping -> "Off: not typing"
-                    else -> "Off: no text field open"
+                    else -> "Off: no text box open"
                 }
             }
         }
@@ -330,7 +330,7 @@ class LightService : Service(), SensorEventListener {
             }
         }
         // While Night mode makes it Typing, the card says so.
-        if (nightTyping && !status.startsWith("Paused") && Prefs.preset(this) != LightRule.Preset.PhonesOwn) status = "Night mode: only while typing"
+        if (nightTyping && !status.startsWith("Paused") && Prefs.preset(this) != LightRule.Preset.PhonesOwn) status = "Night mode: lit only while typing"
         logDecision(status, source, dark, wantLit, wantLevel, ready, link, now, nightTyping, activity)
         Status.light(status, source == LightRule.Source.LinkTyping || source == LightRule.Source.LinkField)
         updateNotification(Status.lightText)
@@ -440,7 +440,7 @@ class LightService : Service(), SensorEventListener {
     private fun notification(text: String): Notification {
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(NotificationChannel(CHANNEL, "Keyboard light", NotificationManager.IMPORTANCE_LOW).apply {
-            description = "Shows that the keyboard light is running, and why it's on or off."
+            description = "Shows the keyboard light is running, and why the keys are lit or not."
             setShowBadge(false)
         })
         val open = packageManager.getLaunchIntentForPackage(packageName)

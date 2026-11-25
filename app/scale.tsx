@@ -45,7 +45,7 @@ function Size({ title, setting, saved, presets, fallback }: {
     {custom && text.trim() !== "" && !valid && <Note>{`Enter a whole number from ${MIN} to ${MAX}.`}</Note>}
     {custom && valid && typed !== saved && <Field label={`Save ${typed} DPI`} onPress={() => save(typed)}>{""}</Field>}
     {problem && <Note>{problem}</Note>}
-    <Note>{`Now ${saved || fallback} DPI. Lower numbers fit more on the screen.`}</Note>
+    <Note>{`Now ${saved || fallback} DPI. Lower fits more on the screen.`}</Note>
   </Section>;
 }
 
@@ -53,14 +53,14 @@ export default function Scale() {
   const result = useSnapshot(state);
   if (result.status !== "ready") return <Screen title="Scale Toggle" />;
   const scale = result.data.scale;
-  return <Screen title="Scale Toggle" subtitle="Each press switches between phone layout and tablet layout.">
+  return <Screen title="Scale Toggle" subtitle="Each press flips between phone layout and tablet layout.">
     <Section title="Side button">
-      <Note>In Shortcut keys, set the side button's long press to open the app called Scale Toggle. It's there while this tool is on.</Note>
+      <Note>In Shortcut keys, set the side button's long press to open Scale Toggle. It's in the app list while this tool is on.</Note>
       <Field label="Open Shortcut keys" onPress={() => void open("shortcutKeys")}>{""}</Field>
       {scale.on && <Field label="Switch now" onPress={() => void open("scaleNow")}>{""}</Field>}
     </Section>
-    <Size title="Phone mode" setting="phone_dpi" saved={scale.phoneDpi} presets={phone} fallback={300} />
-    <Size title="Tablet mode" setting="tablet_dpi" saved={scale.tabletDpi} presets={tablet} fallback={286} />
-    <Note>The phone's own size is 300 DPI. Tablet mode must be lower than phone mode. Sizes take effect on the next switch.</Note>
+    <Size title="Phone layout" setting="phone_dpi" saved={scale.phoneDpi} presets={phone} fallback={300} />
+    <Size title="Tablet layout" setting="tablet_dpi" saved={scale.tabletDpi} presets={tablet} fallback={286} />
+    <Note>The phone starts at 300 DPI. Tablet layout has to be lower than phone layout. New sizes kick in on the next switch.</Note>
   </Screen>;
 }

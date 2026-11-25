@@ -11,7 +11,7 @@ export default function Shortcuts() {
   if (result.status !== "ready") return <Screen title="Shortcuts" />;
   const { scale, rotation, flash, night, play, kill, widgets, helpers } = result.data;
   const slotName = (slot: number) => slot ? `Widget ${slot}` : "No slot";
-  return <Screen title="Shortcuts" subtitle="Turn one on, install its app, then pick it in Settings > Shortcut keys.">
+  return <Screen title="Shortcuts" subtitle="Turn one on, install its little app, then pick that app in Settings > Shortcut keys.">
     <Section title="Actions">
       <Toggle label="Switch layout" subtitle={scale.on ? "Phone and tablet layout" : "Off"}
         value={scale.on} onChange={on => void set("scale_on", on)} />
@@ -23,18 +23,18 @@ export default function Shortcuts() {
         onChange={on => void set("night_on", on)} />
       {night.on && <Field label="Night mode options" href="/night">{""}</Field>}
       <Toggle label="Play/Pause" subtitle={play.on ? "Ready" : "Off"} value={play.on} onChange={on => void set("play_on", on)} />
-      <Toggle label="Kill app" subtitle={kill.on ? "Closes the app in front completely" : "Off"} value={kill.on}
+      <Toggle label="Kill app" subtitle={kill.on ? "Fully closes the app you're in" : "Off"} value={kill.on}
         onChange={on => void set("kill_on", on)} />
     </Section>
     <Section title="Widget buttons">
       {widgets.map(w => <Field key={w.id} label={w.name} href={`/widget/${w.id}`}>{w.ok ? slotName(w.slot) : "Pick again"}</Field>)}
       <Field label="Add a widget button" onPress={() => void pickWidget()}>{""}</Field>
-      <Note>Presses one button of any app's widget. Put it in a slot, then pick that slot's app in Shortcut keys.</Note>
+      <Note>Presses one button on any app's widget. Put it in a slot, then pick that slot's app in Shortcut keys.</Note>
     </Section>
     <Section title="Apps for Shortcut keys">
       {helpers.map(h => <Field key={h.packageName} label={h.label}
         onPress={h.installed ? undefined : () => void installHelper(h.packageName)}>{h.installed ? "Installed" : "Install"}</Field>)}
-      <Note>Android asks once for each app. Where Shortcut keys takes a shortcut instead, pick Titan Tools' shortcuts.</Note>
+      <Note>Android asks once per app. If Shortcut keys wants a shortcut instead of an app, pick Titan Tools' shortcuts.</Note>
       <Field label="Open Shortcut keys" onPress={() => void open("shortcutKeys")}>{""}</Field>
     </Section>
   </Screen>;

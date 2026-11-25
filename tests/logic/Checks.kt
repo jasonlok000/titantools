@@ -226,6 +226,11 @@ private fun reused() {
     policy.sample(20f, 200)
     policy.tick(500)
     check("policy: bright turns off after 250 ms", !policy.shouldLight())
+    val atSetting = LightPolicy(3f, 6f, 0, 250)
+    atSetting.setEnabled(true)
+    atSetting.setInteractive(true)
+    atSetting.sample(3f, 0)
+    check("policy: a reading at the setting is dark", atSetting.shouldLight())
 }
 
 private fun levels() {

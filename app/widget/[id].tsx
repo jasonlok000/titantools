@@ -18,14 +18,14 @@ export default function WidgetPage() {
       <TextInput label="Name" value={name} onChange={setName} placeholder="Door" />
       {name.trim() !== widget.name && name.trim() !== "" && <Field label="Save the name" onPress={() => void renameWidget(widget.id, name)}>{""}</Field>}
     </Section>
-    <Section title="Helper app slot">
+    <Section title="Slot">
       <SettingsChoices value={String(widget.slot)} options={slots} onChange={value => void setWidgetSlot(widget.id, Number(value))} />
-      <Note>The Widget app with this number presses this button. A slot holds one button.</Note>
+      <Note>The TT - Widget app with this number presses this button. One button per slot.</Note>
     </Section>
     <Section title="Button">
       {!widget.ok && <Note>The widget is gone. Pick it again.</Note>}
       <Field label="Pick another button" onPress={() => void pickWidget(widget.id)}>{""}</Field>
-      <Field label="Find it (no press)" onPress={() => void testWidget(widget.id, true)}>{""}</Field>
+      <Field label="Find it, don't press" onPress={() => void testWidget(widget.id, true)}>{""}</Field>
       <Field label="Press it now" onPress={() => void testWidget(widget.id, false)}>{""}</Field>
       <Field label="Remove" onPress={() => { void removeWidget(widget.id); back(); }}>{""}</Field>
     </Section>

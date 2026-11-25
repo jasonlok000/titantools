@@ -70,7 +70,7 @@ object KeyRemap {
         action.startsWith("app:") -> try {
             val info = context.packageManager.getApplicationInfo(action.removePrefix("app:"), 0)
             "Open ${context.packageManager.getApplicationLabel(info)}"
-        } catch (error: PackageManager.NameNotFoundException) { "Open an app that's gone" }
+        } catch (error: PackageManager.NameNotFoundException) { "The app is gone. Pick another." }
         action.startsWith("do:") -> TriggerActivity.ACTIONS[action.removePrefix("do:")] ?: action
         action.startsWith("widget:") -> {
             val slot = action.removePrefix("widget:").toIntOrNull() ?: 0

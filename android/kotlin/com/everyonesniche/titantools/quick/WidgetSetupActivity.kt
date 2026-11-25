@@ -132,7 +132,7 @@ class WidgetSetupActivity : Activity() {
                     picked = target
                     target.isPressed = false
                     result.text = if (WidgetButton.pressable(target)) "Picked: ${WidgetButton.describe(target)}"
-                        else "That part of the widget doesn't do anything. Tap a button."
+                        else "That part doesn't do anything. Tap a button."
                     done.isEnabled = WidgetButton.pressable(target)
                 }
             }
@@ -167,8 +167,8 @@ class WidgetSetupActivity : Activity() {
     private fun waitForWidget(view: AppWidgetHostView, tries: Int) {
         if (WidgetButton.hasPressable(view) || tries >= 40) {
             loaded = true
-            result.text = if (WidgetButton.hasPressable(view)) "Tap the button you want. It won't be pressed now."
-                else "This widget has no buttons Titan Tools can find. Tap the part you want anyway."
+            result.text = if (WidgetButton.hasPressable(view)) "Tap the button you want. Nothing gets pressed yet."
+                else "Titan Tools can't find buttons on this widget. Tap the part you want anyway."
             return
         }
         main.postDelayed({ waitForWidget(view, tries + 1) }, 200)

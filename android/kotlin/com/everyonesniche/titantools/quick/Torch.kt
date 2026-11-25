@@ -59,7 +59,7 @@ object Torch {
                 app.getSystemService(CameraManager::class.java).setTorchMode(camera!!, next)
                 done(if (next) "Flashlight on" else "Flashlight off")
             } catch (error: Exception) {
-                done("Couldn't use the flashlight: the camera may be busy.")
+                done("Couldn't turn on the flashlight. Is the camera in use?")
             }
         }, if (fresh) 150 else 0)
     }

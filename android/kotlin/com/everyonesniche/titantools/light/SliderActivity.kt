@@ -30,8 +30,8 @@ class SliderActivity : Activity() {
             val lux = LightService.instance?.roomLux ?: Float.NaN
             room.text = if (lux.isFinite()) {
                 val now = luxPercent(lux)
-                "Your room now: $now%, ${if (now < threshold) "dark" else "bright"}"
-            } else "Your room now: shown while the keyboard light is on."
+                "Your room right now: $now%, ${if (now < threshold) "dark" else "bright"}"
+            } else "Your room right now shows while the keyboard light is on."
             main.postDelayed(this, 500)
         }
     }
@@ -58,9 +58,9 @@ class SliderActivity : Activity() {
         layout.addView(bar, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
             .apply { topMargin = pad / 2; bottomMargin = pad / 2 })
         text(15f, true).text = when (kind) {
-            KIND_LEVEL -> "How bright the keys are when lit: 100% is the brightest the keyboard goes. While you drag, the keys light at that level so you can see it."
+            KIND_LEVEL -> "How bright the keys are when lit. 100% is as bright as they go. While you drag, the keys light up at that level."
             KIND_DIM -> "How much Extra dim darkens the screen when Night mode turns on. While Night mode is on, it changes as you drag."
-            else -> "How dark the room must be: the keys count it as dark below this. Lower means darker."
+            else -> "Below this, the room counts as dark. Lower means darker."
         }
         room = text(15f)
         room.visibility = if (kind == KIND_DARK) TextView.VISIBLE else TextView.GONE

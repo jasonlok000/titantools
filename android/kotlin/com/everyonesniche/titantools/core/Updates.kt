@@ -142,7 +142,7 @@ object Updates {
         if (!manager.areNotificationsEnabled()) com.everyonesniche.titantools.light.LightLog.write("update notice blocked", "notifications are off for Titan Tools; the home screen banner still shows")
         manager.deleteNotificationChannel("updates")
         manager.createNotificationChannel(NotificationChannel(CHANNEL, "Updates", NotificationManager.IMPORTANCE_HIGH).apply {
-            description = "A new version of Titan Tools is out. Shown once a day until you update."
+            description = "When a new Titan Tools is out. Once a day until you update."
             setSound(null, null)
             enableVibration(false)
         })
@@ -152,7 +152,7 @@ object Updates {
             manager.notify(NOTIFICATION, Notification.Builder(context, CHANNEL)
                 .setSmallIcon(com.everyonesniche.titantools.res.R.drawable.titantools_notification)
                 .setContentTitle("Titan Tools ${release.version} is out")
-                .setContentText("Tap to open the release page and download it.")
+                .setContentText("Tap to get it from the release page.")
                 .setContentIntent(open)
                 .setAutoCancel(true)
                 .build())

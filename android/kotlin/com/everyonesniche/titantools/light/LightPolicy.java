@@ -39,7 +39,8 @@ public final class LightPolicy {
     public void tick(long now) { evaluate(now); }
     private void evaluate(long now) {
         if (!enabled || !interactive || !valid) { lit = false; candidate = null; return; }
-        boolean desired = lit ? lux < offLux : lux < onLux;
+        // Dark at or below the setting (lux 3 with the setting at 3 is dark); bright again only above the higher off level.
+        boolean desired = lit ? lux < offLux : lux <= onLux;
         if (desired == lit) { candidate = null; return; }
         if (candidate == null || candidate != desired) { candidate = desired; candidateSince = now; }
         // A monotonic clock reset is not allowed to complete a pending transition.

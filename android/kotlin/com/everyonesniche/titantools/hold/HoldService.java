@@ -156,9 +156,9 @@ public final class HoldService extends AccessibilityService
     /** Why the tool is stepping aside overall, for the home screen, or null when it's working. */
     public String pauseReason() {
         if (dead) return "Paused: turn Titan Tools on in Accessibility";
-        if (titanKeysSelected) return "Paused: TitanKeys does holds";
-        if (oldAppOn) return "Paused: the old Hold Symbols is still on";
-        if (!KeyInjector.INSTANCE.ready()) return "Paused: Shizuku isn't ready";
+        if (titanKeysSelected) return "Paused: TitanKeys does holds itself";
+        if (oldAppOn) return "Paused: the old Hold Symbols app is still on";
+        if (!KeyInjector.INSTANCE.ready()) return "Paused: start Shizuku";
         return null;
     }
 
@@ -230,7 +230,8 @@ public final class HoldService extends AccessibilityService
         // A text field is connected: input started for a text class field (TYPE_NULL and fallback connections don't count).
         // TitanKeys' TYPING messages aren't used: TitanKeys sends one for every key it gets, including the clicks Titan Tools
         // lets through or sends again, so they made holds stand down in apps with no field at all.
-        boolean field = editorActive && lastInputType != InputType.TYPE_NULL && input != null && input.getCurrentInputStarted();
+        // Any field you type into: text, number, phone or date (Hold Symbols itself stays text-only through editorActive).
+        boolean field = (lastInputType & InputType.TYPE_MASK_CLASS) != InputType.TYPE_NULL && input != null && input.getCurrentInputStarted();
         // The launcher's empty search box (TitanKeys' kind "home") isn't typing, until something is typed in it.
         return field && !com.everyonesniche.titantools.core.Link.INSTANCE.current(this).getOnHome();
     }
@@ -241,7 +242,7 @@ public final class HoldService extends AccessibilityService
         long now = System.currentTimeMillis();
         String typed = link.getTypedAt() > 0 ? ((now - link.getTypedAt()) / 1000.0) + "s" : "never";
         return "key=letter"
-                + " field=" + (editorActive ? "text" : "none") + " inputType=0x" + Integer.toHexString(lastInputType)
+                + " field=" + new String[]{"none", "text", "number", "phone", "date"}[Math.min(4, lastInputType & InputType.TYPE_MASK_CLASS)] + " inputType=0x" + Integer.toHexString(lastInputType)
                 + " started=" + (input != null && input.getCurrentInputStarted())
                 + " titanKeysTyped=" + typed + " home=" + link.getOnHome() + (link.getTypedAt() == link.getLastAt() ? "" : " (last was a field opening)")
                 + " shizuku=" + KeyInjector.INSTANCE.ready() + " screen=" + screenUsable + " hold=" + remapHold + "ms";
