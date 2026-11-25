@@ -4,8 +4,8 @@
  */
 const notes: Record<number, string[]> = {
   29: [
-    "Keys for actions: hold a key, or press it twice, to open an app or run an action. Letters, Back, Sym, fn, and any key you add.",
-    "Keyboard light: new modes, In the dark while a text box is open, and While typing. Typing now means keys and swipes, not a box opening.",
+    "Keys for actions: hold a letter to open an app or run an action; special buttons like Func1 can also be pressed twice.",
+    "Keyboard light: new modes, In the dark while a text box is open, and While typing (or swiping). Typing now means keys and swipes, not a box opening.",
     "A new version now also shows a message when you open Titan Tools.",
   ],
   23: [

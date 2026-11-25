@@ -56,7 +56,7 @@ object KeyRemap {
     }
 
     fun map(context: Context): Map<Int, String> = read(context, MAP)
-    fun doubles(context: Context): Map<Int, String> = read(context, DOUBLE)
+    fun doubles(context: Context): Map<Int, String> = read(context, DOUBLE).filterKeys { it !in LETTERS }
 
     /** Keys added by pressing them. */
     fun extraKeys(context: Context): List<Int> {
@@ -91,6 +91,8 @@ object KeyRemap {
     fun set(context: Context, keyCode: Int, action: String, double: Boolean) {
         require(usable(keyCode)) { "Not a key that can have an action" }
         require(action.isEmpty() || valid(action)) { "Unknown action" }
+        // Letters are hold-only (owner): double presses are for special buttons like Func1.
+        require(!double || keyCode !in LETTERS || action.isEmpty()) { "Letters only have holds" }
         val next = (if (double) doubles(context) else map(context)).toMutableMap()
         if (action.isEmpty()) next.remove(keyCode) else next[keyCode] = action
         val json = JSONObject()

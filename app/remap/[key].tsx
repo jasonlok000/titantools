@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Screen, Section, SettingsChoices, back, useRouteParams, useSnapshot } from "ink";
-import { listApps, setRemap, state } from "../../lib/titantools";
+import { Field, Screen, Section, SettingsChoices, back, useRouteParams, useSnapshot } from "ink";
+import { listApps, open, setRemap, state } from "../../lib/titantools";
 import { Note } from "../../lib/note";
 
 /** Titan Tools' own actions and the system's, by the ids KeyRemap.kt runs. */
@@ -31,19 +31,26 @@ export default function RemapKey() {
   useEffect(() => void listApps().then(setApps), []);
   const k = result.status === "ready" ? result.data.remap.keys.find(x => x.code === code) : undefined;
   if (result.status !== "ready" || !k) return <Screen title="Key" />;
-  const current = (twice ? k.double : k.hold)?.id ?? "";
+  const current = (twice && !k.letter ? k.double : k.hold)?.id ?? "";
   // Widget slots show their app: "Widget 1 – 1Valet".
   const widgets = [1, 2, 3, 4, 5].map(n => {
     const app = result.data.widgets.find(w => w.slot === n)?.app;
     return { value: `widget:${n}`, label: app ? `Widget ${n} – ${app}` : `Widget ${n}` };
   });
   const options = [...actions.slice(0, 7), ...widgets, ...actions.slice(7)];
-  const pick = (action: string) => void setRemap(code, action, twice).then(() => back());
-  return <Screen title={k.name} subtitle={`Hold: ${k.hold?.label ?? "nothing"} · Twice: ${k.double?.label ?? "nothing"}`}>
-    <Section title="When">
+  const pick = (action: string) => void setRemap(code, action, twice && !k.letter).then(() => back());
+  return <Screen title={k.name} subtitle={k.letter ? `Hold: ${k.hold?.label ?? "nothing"}`
+    : `Hold: ${k.hold?.label ?? "nothing"} · Twice: ${k.double?.label ?? "nothing"}`}>
+    {!k.letter && <Section title="Phone setting">
+      {k.native ? <Note>{k.native.ok ? `Ready: the phone has it as ${k.native.now}.`
+        : `The phone has it as ${k.native.now}, so it acts on it too. Set ${k.native.fix} first.`}</Note>
+        : <Note>{"If this is Func1 or Func2, set it to Programmable key > None in the phone's Shortcut keys first, or the phone acts on it too."}</Note>}
+      {!(k.native?.ok) && <Field label="Open Shortcut keys" onPress={() => void open("shortcutKeys")}>{""}</Field>}
+    </Section>}
+    {!k.letter && <Section title="When">
       <SettingsChoices value={twice ? "twice" : "hold"} options={[{ value: "hold", label: "Held" }, { value: "twice", label: "Pressed twice" }]}
         onChange={value => setTwice(value === "twice")} />
-    </Section>
+    </Section>}
     <Section title="Action">
       <SettingsChoices value={current} options={options} onChange={pick} />
       <Note>Wi-Fi, Bluetooth and mobile data can't be switched directly without Shizuku: Quick settings opens them.</Note>

@@ -42,7 +42,7 @@ export type State = {
   /** Update checks: on or off, a newer version found (or null), and the version code to show what's new for once (0 for none). */
   updates: { on: boolean; available: string | null; whatsNew: number };
   /** Keys for actions: on or off, the hold time, every key with its hold and double press actions, Accessibility and Shizuku. */
-  remap: { on: boolean; holdMillis: number; keys: RemapKey[]; service: boolean; shizuku: boolean };
+  remap: { on: boolean; holdMillis: number; keys: RemapKey[]; service: boolean; shizuku: boolean; buttons: NativeButton[] };
 };
 
 /** The settings the screens can change, by their native names (Prefs.kt). */
@@ -96,7 +96,7 @@ export const ready = (s: State) => s.shizuku.installed && s.shizuku.running && s
 export const shizukuStopped = (s: State) => s.shizuku.installed && s.shizuku.everAllowed && !s.shizuku.running;
 
 const presetNames: Record<LightPreset, string> = {
-  night_typing: "In the dark, while typing", dark_field: "In the dark, while a text box is open", typing: "While typing",
+  night_typing: "In the dark, while typing (or swiping)", dark_field: "In the dark, while a text box is open", typing: "While typing (or swiping)",
   always_dark: "In the dark, always", phone: "Phone's own", custom: "Custom",
 };
 export const presetName = (preset: LightPreset) => presetNames[preset];
@@ -117,7 +117,10 @@ export const clock = (minutes: number) =>
 export const shortcutsOn = (s: State) => [s.scale.on, s.rotation.on, s.flash.on, s.night.on, s.play.on, s.kill.on].filter(Boolean).length + s.widgets.length;
 
 export type RemapAction = { id: string; label: string } | null;
-export type RemapKey = { code: number; name: string; hold: RemapAction; double: RemapAction };
+/** What the phone itself does with a special button: ready (Programmable key > None) or what to set. */
+export type NativeButton = { label: string; ok: boolean; now: string; fix: string | null };
+export type RemapKey = { code: number; name: string; hold: RemapAction; double: RemapAction; letter: boolean;
+  native: { ok: boolean; now: string; fix: string | null } | null };
 
 export type WidgetButton = { id: string; name: string; app: string; button: string; slot: number; ok: boolean };
 

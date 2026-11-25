@@ -6,9 +6,9 @@ import { Note } from "../lib/note";
 const presetIds: LightPreset[] = ["night_typing", "dark_field", "typing", "always_dark", "phone", "custom"];
 /** One plain line for each preset: exactly when the keys light. */
 const presetNotes: Record<LightPreset, string> = {
-  night_typing: "The room is dark and you're typing; off the rest of the time.",
+  night_typing: "The room is dark and you're typing or swiping on the keys; off the rest of the time.",
   dark_field: "The room is dark and a box you can type in is open.",
-  typing: "You're typing, bright or dark; off the rest of the time.",
+  typing: "You're typing or swiping on the keys, bright or dark; off the rest of the time.",
   always_dark: "The room is dark and the screen is on.",
   phone: "The phone's own key light settings; Titan Tools stays out.",
   custom: "Pick when and what below.",
