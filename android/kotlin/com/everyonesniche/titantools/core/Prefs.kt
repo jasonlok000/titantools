@@ -36,6 +36,8 @@ object Prefs {
     const val FLASH_ON = "flash_on"
     const val PLAY_ON = "play_on"
     const val KILL_ON = "kill_on"
+    /** Update checks (Updates), on unless turned off. */
+    const val UPDATES_ON = "updates_on"
     /** Widget button: the hosted widget, its app, the picked button, where it is, and the size it was picked at. */
     const val WIDGET_ON = "widget_on"
     const val WIDGET_ID = "widget_id"

@@ -13,5 +13,6 @@ class BootReceiver : BroadcastReceiver() {
         LightService.sync(context)
         ScaleActivity.sync(context)
         com.everyonesniche.titantools.rotate.Rotation.sync(context)
+        Updates.schedule(context)
     }
 }

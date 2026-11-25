@@ -100,6 +100,15 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
         Torch.ready(activity)
         LightRecovery.checkSoon(activity)
         Rotation.restoreSoon(activity)
+        com.everyonesniche.titantools.core.Updates.checkSoon(activity, fromApp = true) { changed() }
+        askForNotifications()
+    }
+
+    /** The update notice needs notifications (Android asks once or twice, then stops showing the question by itself). */
+    private fun askForNotifications() {
+        if (!com.everyonesniche.titantools.core.Updates.on(activity)) return
+        if (activity.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED) return
+        activity.requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 21)
     }
 
     override fun onActivityDestroyed(target: android.app.Activity) {
@@ -142,6 +151,13 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
         when (operation) {
             "set" -> set(data.getString("key"), data.get("value"))
             "lightPreview" -> LightService.instance?.preview(data.getInt("level"))
+            "seenWhatsNew" -> {
+                com.everyonesniche.titantools.core.Updates.seenWhatsNew(activity)
+                changed()
+            }
+            "openUpdate" -> com.everyonesniche.titantools.core.Updates.available(activity)?.let {
+                activity.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(it.url)))
+            }
             "requestShizuku" -> if (Shizuku.running() && !Shizuku.deniedForGood()) Shizuku.requestPermission() else open("shizukuApp")
             "open" -> open(data.getString("target"))
             "uninstall" -> uninstall(data.getString("packageName"))
@@ -174,7 +190,7 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
         val editor = Prefs.of(activity).edit()
         when (key) {
             Prefs.LIGHT_ON, Prefs.SCALE_ON, Prefs.HOLD_ON, Prefs.ROTATION_ON, Prefs.FLASH_ON, Prefs.NIGHT_ON, Prefs.PLAY_ON, Prefs.WIDGET_ON, Prefs.KILL_ON,
-            Prefs.HOLD_VIBRATE, Prefs.HOLD_PASSWORDS, Prefs.NIGHT_EXTRA_DIM, Prefs.NIGHT_DARK_THEME, Prefs.LIGHT_NIGHT_TYPING -> editor.putBoolean(key, value as Boolean)
+            Prefs.HOLD_VIBRATE, Prefs.HOLD_PASSWORDS, Prefs.UPDATES_ON, Prefs.NIGHT_EXTRA_DIM, Prefs.NIGHT_DARK_THEME, Prefs.LIGHT_NIGHT_TYPING -> editor.putBoolean(key, value as Boolean)
             // Editing a list makes the light's rule Custom.
             Prefs.LIGHT_DARK_ROOM, Prefs.LIGHT_NIGHT_HOURS, Prefs.LIGHT_DARK_THEME, Prefs.LIGHT_ANY_TIME ->
                 editor.putBoolean(key, value as Boolean).putString(Prefs.LIGHT_PRESET, LightRule.Preset.Custom.id)
@@ -213,6 +229,10 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
             Prefs.LIGHT_DARK_ROOM, Prefs.LIGHT_NIGHT_HOURS, Prefs.LIGHT_DARK_THEME, Prefs.LIGHT_ANY_TIME, Prefs.LIGHT_ACTIVITY,
             Prefs.LIGHT_NIGHT_FROM, Prefs.LIGHT_NIGHT_TO, Prefs.LIGHT_NIGHT_TYPING -> LightService.sync(activity)
             Prefs.SCALE_ON -> ScaleActivity.sync(activity)
+            Prefs.UPDATES_ON -> {
+                com.everyonesniche.titantools.core.Updates.checkSoon(activity, fromApp = false) { changed() }
+                if (value == true) askForNotifications()
+            }
             Prefs.ROTATION_ON -> Rotation.switched(activity, value as Boolean)
             Prefs.FLASH_ON, Prefs.PLAY_ON -> Shortcuts.sync(activity)
             Prefs.WIDGET_ON -> Shortcuts.sync(activity)
@@ -341,6 +361,11 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
                 .put("keyPresses", source == LightRule.Source.FirmwareKeys)
                 .put("linkSeen", link.seen).put("linkAlive", LightRule.alive(link, now))
                 .put("roomLux", LightService.instance?.roomLux?.takeIf { it.isFinite() }?.toDouble() ?: JSONObject.NULL))
+            .put("updates", com.everyonesniche.titantools.core.Updates.let { updates ->
+                val release = updates.available(activity)
+                JSONObject().put("on", updates.on(activity)).put("whatsNew", updates.whatsNew(activity))
+                    .put("available", release?.version ?: JSONObject.NULL)
+            })
             .put("scale", JSONObject().put("on", scaleOn).put("status", scaleStatus)
                 .put("phoneDpi", prefs.getInt(Prefs.PHONE_DPI, 0)).put("tabletDpi", prefs.getInt(Prefs.TABLET_DPI, 0)))
             .put("hold", JSONObject().put("on", holdOn).put("status", holdStatus).put("accessibility", accessibility)

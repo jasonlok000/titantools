@@ -39,6 +39,8 @@ export type State = {
   night: { on: boolean; active: boolean; extraDim: boolean; dimLevel: number; darkTheme: boolean };
   oldApps: { packageName: string; name: string; tool: "light" | "scale" | "hold"; running: boolean }[];
   titanKeys: { installed: boolean; selected: boolean };
+  /** Update checks: on or off, a newer version found (or null), and the version code to show what's new for once (0 for none). */
+  updates: { on: boolean; available: string | null; whatsNew: number };
 };
 
 /** The settings the screens can change, by their native names (Prefs.kt). */
@@ -47,7 +49,7 @@ export type Setting =
   | "light_level" | "light_dark_lux" | "light_stay_seconds" | "light_preset" | "light_activity"
   | "light_dark_room" | "light_night_hours" | "light_dark_theme" | "light_any_time" | "light_night_from" | "light_night_to" | "light_night_typing"
   | "night_extra_dim" | "night_dim_level" | "night_dark_theme"
-  | "hold_millis" | "phone_dpi" | "tablet_dpi";
+  | "hold_millis" | "phone_dpi" | "tablet_dpi" | "updates_on";
 
 /** The pages setup and the cards open. */
 export type Page =
@@ -72,6 +74,10 @@ export async function set(key: Setting, value: boolean | number | string) {
 export const open = (target: Page) => native("open", { target });
 /** Lights the keys at [level] for a moment, whatever the rules say, then they go back to what the rules say. */
 export const previewLevel = (level: number) => native("lightPreview", { level });
+/** Opens the newer release's page. */
+export const openUpdate = () => native("openUpdate");
+/** What's new was read: it isn't shown again until the next update. */
+export const seenWhatsNew = () => then(native("seenWhatsNew"));
 export const requestShizuku = () => native("requestShizuku");
 export const uninstall = (packageName: string) => native("uninstall", { packageName });
 

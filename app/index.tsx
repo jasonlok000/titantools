@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Field, Screen, Section, Toggle, useSnapshot } from "ink";
-import { open, presetName, ready, set, shortcutsOn, shizukuStopped, state, uninstall } from "../lib/titantools";
+import { open, openUpdate, presetName, ready, seenWhatsNew, set, shortcutsOn, shizukuStopped, state, uninstall } from "../lib/titantools";
+import { whatsNew } from "../lib/whatsnew";
 import { Note } from "../lib/note";
 
 /** One card per tool: a switch with a plain status line, and its details behind one row. Shortcuts are one card of their own. */
@@ -12,7 +13,16 @@ export default function Home() {
   const stopped = shizukuStopped(s);
   const needsSetup = !ready(s) && !stopped;
   const shortcuts = shortcutsOn(s);
+  const news = s.updates.whatsNew ? whatsNew(s.updates.whatsNew) : [];
   return <Screen title="Titan Tools" subtitle="Small tools for the Titan 2 Elite. Turn on the ones you want.">
+    {s.updates.available && <Section title="Update">
+      <Field label={`Titan Tools ${s.updates.available} is out`} onPress={() => void openUpdate()}>Open</Field>
+      <Note>Opens the release page, where you can download it.</Note>
+    </Section>}
+    {news.length > 0 && <Section title={`New in Titan Tools ${s.version}`}>
+      {news.map(line => <Note key={line}>{line}</Note>)}
+      <Field label="Got it" onPress={() => void seenWhatsNew()}>{""}</Field>
+    </Section>}
     {stopped && <Section title="Shizuku stopped">
       <Note>Shizuku stops when the phone restarts. Start it again and your tools carry on.</Note>
       <Field label="Start Shizuku again" onPress={() => void open("shizukuApp")}>{""}</Field>
@@ -56,6 +66,10 @@ export default function Home() {
           <Note>A keyboard made for the Titan 2 Elite: swipe on the keys, hold for symbols, typos fixed as you go.</Note>
           <Field label="Get TitanKeys" onPress={() => void open("titanKeysPage")}>{""}</Field>
         </>}
+    </Section>
+    <Section title="Updates">
+      <Toggle label="Check for updates" subtitle="Every few hours, and when you open Titan Tools. A notification when a new version is out."
+        value={s.updates.on} onChange={on => void set("updates_on", on)} />
     </Section>
     <Note align="center">{`Titan Tools ${s.version}`}</Note>
   </Screen>;
