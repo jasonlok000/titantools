@@ -50,8 +50,11 @@ object KeyRemap {
      * The phone's own shortcut functions (com.agui.shortcutsettings' ShortcutFunctionReceiver, exported without a permission):
      * a broadcast of com.agui.action.SHORTCUT_FUNCTION with "shortcut_function" set to the function's name. Read from the
      * phone's app on 2026-11-24: Shortcut_function11 toggles Mini mode (agui_mini_mode_enable).
+     *
+     * Not offered: com.agui.action.SHORTCUT_FUNCTION is a protected broadcast, so only the system may send it (even adb's
+     * shell user is refused, 2026-11-24). Kept empty so a saved "phone:" action from build 31 just does nothing.
      */
-    val PHONE = linkedMapOf("mini" to ("Mini mode" to "Shortcut_function11"))
+    val PHONE = linkedMapOf<String, Pair<String, String>>()
     private const val PHONE_PACKAGE = "com.agui.shortcutsettings"
     private const val PHONE_ACTION = "com.agui.action.SHORTCUT_FUNCTION"
 
