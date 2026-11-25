@@ -141,6 +141,7 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
     private fun run(operation: String, data: JSONObject) {
         when (operation) {
             "set" -> set(data.getString("key"), data.get("value"))
+            "lightPreview" -> LightService.instance?.preview(data.getInt("level"))
             "requestShizuku" -> if (Shizuku.running() && !Shizuku.deniedForGood()) Shizuku.requestPermission() else open("shizukuApp")
             "open" -> open(data.getString("target"))
             "uninstall" -> uninstall(data.getString("packageName"))

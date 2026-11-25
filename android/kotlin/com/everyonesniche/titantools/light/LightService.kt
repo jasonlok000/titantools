@@ -198,6 +198,30 @@ class LightService : Service(), SensorEventListener {
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
 
+    /** Until this time (elapsed), the brightness bar's preview owns the light; then the rules take it back. */
+    private var previewUntil = 0L
+    private val endPreview = Runnable {
+        if (SystemClock.elapsedRealtime() < previewUntil) return@Runnable
+        previewUntil = 0L
+        LightLog.write("preview end", "back to the rules")
+        if (!lit) try { Shell.light(0) } catch (ignored: Exception) {}
+        applied = null
+        evaluate()
+    }
+
+    /** The brightness bar is moving: light the keys at [value] now, even if the rules have them off, for a moment. */
+    fun preview(value: Int) {
+        if (!LightLevels.valid(value)) return
+        worker.post {
+            if (!screenOn || !Shizuku.allowed()) return@post
+            if (previewUntil == 0L) LightLog.write("preview", "level=$value")
+            previewUntil = SystemClock.elapsedRealtime() + PREVIEW_MILLIS
+            try { Shell.light(value) } catch (error: Exception) { LightLog.write("FAIL preview", "${error.javaClass.simpleName}: ${error.message}") }
+            worker.removeCallbacks(endPreview)
+            worker.postDelayed(endPreview, PREVIEW_MILLIS)
+        }
+    }
+
     private fun locked(): Boolean = getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == true
 
     /** A key on the built-in keyboard went down (from the hold service): judged against the light for the log. */
@@ -355,6 +379,8 @@ class LightService : Service(), SensorEventListener {
      * press, the timeout and the automatic light off), then one direct write so it changes at once. Checked again every minute.
      */
     private fun apply(wantLit: Boolean, wantLevel: Boolean, timeout: String) {
+        // The brightness preview has the light; endPreview hands it back.
+        if (previewUntil != 0L) return
         val key = "$wantLit/$wantLevel/$timeout"
         val due = SystemClock.elapsedRealtime() - vendorCheckedAt > VENDOR_CHECK_MILLIS
         if (key == applied && !due) return
@@ -463,6 +489,7 @@ class LightService : Service(), SensorEventListener {
         private const val CHANNEL = "keyboard_light"
         private const val NOTIFICATION = 7
         private const val ASSERT_MILLIS = 5_000L
+        private const val PREVIEW_MILLIS = 2_500L
         private const val VENDOR_CHECK_MILLIS = 60_000L
         private const val TAG = "TitanTools"
 

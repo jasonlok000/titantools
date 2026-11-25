@@ -1,6 +1,6 @@
 import { Screen, Section, SettingsChoices, Text, Toggle, useSnapshot } from "ink";
-import { clock, levelPercent, luxPercent, percentLevel, percentLux, presetName, set, state, type LightActivity, type LightPreset } from "../lib/titantools";
-import { SegmentSlider } from "../lib/slider";
+import { clock, previewLevel, levelPercent, luxPercent, percentLevel, percentLux, presetName, set, state, type LightActivity, type LightPreset } from "../lib/titantools";
+import { Slider } from "../lib/slider";
 import { DescribedChoices } from "../lib/choices";
 import { Note } from "../lib/note";
 
@@ -20,9 +20,6 @@ const activities: { value: LightActivity; label: string; note: string }[] = [
   { value: "typing", label: "Typing", note: "Lit as you type, off after the stay time." },
 ];
 
-/** Brightness: 5% to 100% in steps of 5. Dark room: 0% to 100% of the lux scale in steps of 5. */
-const LEVEL_STEPS = 20;
-const LUX_STEPS = 21;
 const halfHours = Array.from({ length: 48 }, (_, i) => i * 30);
 
 /** "Light the keys when [darkness] and [activity]", with presets on top. */
@@ -63,22 +60,23 @@ export default function Light() {
     </Section>}
     {light.preset !== "phone" && <Section title="Brightness">
       <Text size={28}>{`${levelPercent(light.level)}%`}</Text>
-      <SegmentSlider count={LEVEL_STEPS} value={Math.min(LEVEL_STEPS, Math.max(1, Math.round(levelPercent(light.level) / 5))) - 1}
-        onPick={index => {
-          const level = percentLevel((index + 1) * 5);
+      <Slider min={4} max={100} value={levelPercent(light.level)}
+        onPick={percent => {
+          const level = percentLevel(percent);
+          void previewLevel(level);
           if (level !== light.level) void set("light_level", level);
         }} />
-      <Note>How bright the keys are when lit: 100% is the brightest the keyboard goes. Tap or drag along the bar; lit keys change as you go.</Note>
+      <Note>How bright the keys are when lit: 100% is the brightest the keyboard goes. While you move the bar, the keys light at that level so you can see it.</Note>
     </Section>}
     {light.preset !== "phone" && light.darkRoom && <Section title="Dark room below">
       <Text size={28}>{`${luxPercent(light.darkLux)}%`}</Text>
-      <SegmentSlider count={LUX_STEPS} value={Math.round(luxPercent(light.darkLux) / 5)}
-        marker={light.roomLux == null ? null : luxPercent(light.roomLux) / 5}
-        onPick={index => {
-          const lux = percentLux(index * 5);
+      <Slider min={0} max={100} value={luxPercent(light.darkLux)}
+        marker={light.roomLux == null ? null : luxPercent(light.roomLux)}
+        onPick={percent => {
+          const lux = percentLux(percent);
           if (lux !== light.darkLux) void set("light_dark_lux", lux);
         }} />
-      <Note>How dark the room must be: the keys count it as dark below this. Lower means darker. Tap or drag along the bar.</Note>
+      <Note>How dark the room must be: the keys count it as dark below this. Lower means darker. Tap or slide along the bar.</Note>
       <Note>{light.roomLux == null ? "Your room now: shown while the light is on and the screen is on."
         : `Your room now (blue line): ${luxPercent(light.roomLux)}%, ${light.roomLux < light.darkLux ? "dark" : "bright"}. Set the bar just above it to light the keys here.`}</Note>
     </Section>}

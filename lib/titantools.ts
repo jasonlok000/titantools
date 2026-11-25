@@ -70,6 +70,8 @@ export async function set(key: Setting, value: boolean | number | string) {
 }
 
 export const open = (target: Page) => native("open", { target });
+/** Lights the keys at [level] for a moment, whatever the rules say, then they go back to what the rules say. */
+export const previewLevel = (level: number) => native("lightPreview", { level });
 export const requestShizuku = () => native("requestShizuku");
 export const uninstall = (packageName: string) => native("uninstall", { packageName });
 
