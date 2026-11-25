@@ -90,6 +90,7 @@ object Updates {
     /** Checks now on a worker thread, unless checks are off or [fromApp] and one ran in the last 10 minutes. */
     fun checkSoon(context: Context, fromApp: Boolean, done: (() -> Unit)? = null) {
         val app = context.applicationContext
+        com.everyonesniche.titantools.light.LightLog.init(app)
         schedule(app)
         if (!on(app)) {
             done?.invoke()
@@ -98,7 +99,7 @@ object Updates {
         val p = prefs(app)
         if (fromApp && System.currentTimeMillis() - p.getLong("checked_at", 0) < OPEN_GAP_MILLIS) return
         work.execute {
-            try { check(app) } catch (error: Exception) { Log.i(TAG, "Update check failed: ${error.message}") }
+            try { check(app) } catch (error: Exception) { com.everyonesniche.titantools.light.LightLog.write("update check failed", "${error.javaClass.simpleName}: ${error.message}") }
             done?.invoke()
         }
     }
@@ -120,14 +121,17 @@ object Updates {
                     p.edit().putString("version", release.version).putInt("code", release.code).putString("url", release.url)
                         .putString("etag", connection.getHeaderField("ETag")).apply()
                 }
-                else -> { Log.i(TAG, "Update check: HTTP $code"); return }
+                else -> { com.everyonesniche.titantools.light.LightLog.write("update check", "HTTP $code"); return }
             }
         } finally {
             connection.disconnect()
         }
-        val release = available(context) ?: return
+        val release = available(context)
+        com.everyonesniche.titantools.light.LightLog.write("update check", "newest ${p.getString("version", null)}, installed ${installed(context).first}: ${if (release != null) "newer" else "up to date"}")
+        if (release == null) return
         val key = "${release.version}/${release.code}"
         if (p.getString("notified", null) == key && System.currentTimeMillis() - p.getLong("notified_at", 0) < REPEAT_MILLIS) return
+        com.everyonesniche.titantools.light.LightLog.write("update notice", "${release.version} (${release.code})")
         notify(context, release)
         p.edit().putString("notified", key).putLong("notified_at", System.currentTimeMillis()).apply()
         Status.changed()
@@ -135,6 +139,7 @@ object Updates {
 
     private fun notify(context: Context, release: Release) {
         val manager = context.getSystemService(NotificationManager::class.java)
+        if (!manager.areNotificationsEnabled()) com.everyonesniche.titantools.light.LightLog.write("update notice blocked", "notifications are off for Titan Tools; the home screen banner still shows")
         manager.deleteNotificationChannel("updates")
         manager.createNotificationChannel(NotificationChannel(CHANNEL, "Updates", NotificationManager.IMPORTANCE_HIGH).apply {
             description = "A new version of Titan Tools is out. Shown once a day until you update."
@@ -152,7 +157,7 @@ object Updates {
                 .setAutoCancel(true)
                 .build())
         } catch (error: SecurityException) {
-            Log.i(TAG, "Notifications are off for Titan Tools")
+            com.everyonesniche.titantools.light.LightLog.write("update notice blocked", "notifications are off for Titan Tools")
         }
     }
 
