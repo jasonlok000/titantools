@@ -23,6 +23,8 @@ export type State = {
     titanKeysKeyboard: boolean; keyPresses: boolean;
     /** TitanKeys has sent a typing message, and sent one in the last 10 minutes. */
     linkSeen: boolean; linkAlive: boolean;
+    /** The light sensor's reading now, while the light runs and the screen is on; else null. */
+    roomLux: number | null;
   };
   scale: { on: boolean; status: string; phoneDpi: number; tabletDpi: number };
   hold: { on: boolean; status: string; accessibility: boolean; millis: number; vibrate: boolean; passwords: boolean };
@@ -78,9 +80,19 @@ export const ready = (s: State) => s.shizuku.installed && s.shizuku.running && s
 export const shizukuStopped = (s: State) => s.shizuku.installed && s.shizuku.everAllowed && !s.shizuku.running;
 
 const presetNames: Record<LightPreset, string> = {
-  night_typing: "Night typing", always_dark: "Always in the dark", phone: "Phone's own", custom: "Custom",
+  night_typing: "In the dark, while typing", always_dark: "In the dark, always", phone: "Phone's own", custom: "Custom",
 };
 export const presetName = (preset: LightPreset) => presetNames[preset];
+
+/** Brightness in percent of the firmware's 255; the keys stay dark below level 11 (4%). */
+export const levelPercent = (level: number) => Math.round(level / 2.55);
+export const percentLevel = (percent: number) => Math.min(255, Math.max(11, Math.round(percent * 2.55)));
+
+/** The dark-room threshold in percent of a log scale from 0.5 to 200 lux, so the dim end has room. */
+const LUX_MIN = 0.5;
+const LUX_SPAN = Math.log(200 / LUX_MIN);
+export const luxPercent = (lux: number) => Math.min(100, Math.max(0, Math.round(Math.log(Math.max(lux, LUX_MIN) / LUX_MIN) / LUX_SPAN * 100)));
+export const percentLux = (percent: number) => Math.round(LUX_MIN * Math.exp(percent / 100 * LUX_SPAN) * 10) / 10;
 
 /** A time of day from minutes after midnight, as 20:00. */
 export const clock = (minutes: number) =>

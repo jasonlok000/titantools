@@ -74,7 +74,8 @@ object Prefs {
 
     const val DEFAULT_LEVEL = LightLevels.DEFAULT
     /** Below this many lux it counts as dark (NightKeys' default 10). It counts as bright again above max(+3, ×1.5). */
-    val DARK_LUX = listOf(1f, 3f, 5f, 10f, 20f, 30f, 50f, 100f)
+    /** The dark-room slider's range (log-scaled on the screen); earlier builds offered only a list inside it. */
+    val DARK_LUX_RANGE = 0.5f..200f
     const val DEFAULT_DARK_LUX = 10f
     val STAY_SECONDS = listOf(0, 1, 2, 5, 10, 30, 60)
     const val DEFAULT_STAY_SECONDS = 5
@@ -128,7 +129,7 @@ object Prefs {
 
     fun staySeconds(context: Context): Int = of(context).getInt(LIGHT_STAY_SECONDS, DEFAULT_STAY_SECONDS).takeIf { it in STAY_SECONDS } ?: DEFAULT_STAY_SECONDS
 
-    fun darkLux(context: Context): Float = of(context).getFloat(LIGHT_DARK_LUX, DEFAULT_DARK_LUX).let { if (it in 0.5f..200f) it else DEFAULT_DARK_LUX }
+    fun darkLux(context: Context): Float = of(context).getFloat(LIGHT_DARK_LUX, DEFAULT_DARK_LUX).let { if (it in DARK_LUX_RANGE) it else DEFAULT_DARK_LUX }
 
     fun brightLux(dark: Float): Float = maxOf(dark + 3f, dark * 1.5f)
 

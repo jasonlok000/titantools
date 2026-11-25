@@ -20,5 +20,10 @@ export default function Night() {
         onChange={value => void set("night_dim_level", Number(value))} />
       <Note>Takes effect the next time Night mode goes on.</Note>
     </Section>}
+    {result.data.light.on && result.data.light.preset !== "phone" && <Section title="Keyboard light">
+      <Toggle label="With Night mode on: only while typing" value={result.data.light.nightTyping}
+        onChange={on => void set("light_night_typing", on)} />
+      <Note>While Titan Tools' Night mode is on, the keys light only as you type, whatever you picked on the Keyboard light screen.</Note>
+    </Section>}
   </Screen>;
 }

@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.app.KeyguardManager
 import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -67,6 +68,15 @@ class LightService : Service(), SensorEventListener {
     private var handedBack = false
     private var lastNotification = ""
     private var stopListening: List<() -> Unit> = emptyList()
+    /** For the decision log: the last decision written, the last link message seen, and a trigger waiting to be judged. */
+    private var loggedDecision = ""
+    private var seenLinkAt = -1L
+    private var trigger: String? = null
+    private var keyLoggedAt = 0L
+    /** The light sensor's last reading while the screen is on (NaN before one), for the light screen's room indicator. */
+    @Volatile var roomLux = Float.NaN
+        private set
+    private var roomPushedAt = 0L
 
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -79,6 +89,8 @@ class LightService : Service(), SensorEventListener {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        LightLog.init(this)
+        LightLog.write("service start")
         startForeground(NOTIFICATION, notification("Starting"), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
         thread = HandlerThread("titantools-light").apply { start() }
         worker = Handler(thread.looper)
@@ -153,7 +165,9 @@ class LightService : Service(), SensorEventListener {
         val now = screenIsOn()
         val changed = now != screenOn
         screenOn = now
+        if (changed) LightLog.write(if (now) "screen on" else "screen off", "locked=${locked()}")
         policy?.setInteractive(now)
+        if (!now) roomLux = Float.NaN
         if (!now) unregisterSensor() else if (changed || !registered) registerSensor()
         evaluate()
     }
@@ -171,10 +185,32 @@ class LightService : Service(), SensorEventListener {
     override fun onSensorChanged(event: SensorEvent) {
         val value = event.values.firstOrNull() ?: Float.NaN
         policy?.sample(value, SystemClock.elapsedRealtime())
+        // The light screen's room indicator follows the sensor: told when the reading moves by a tenth, at most twice a second.
+        val shown = roomLux
+        roomLux = value
+        val now = SystemClock.elapsedRealtime()
+        if (now - roomPushedAt >= 500 && (shown.isNaN() || kotlin.math.abs(value - shown) > maxOf(0.3f, shown * 0.1f))) {
+            roomPushedAt = now
+            com.everyonesniche.titantools.core.Status.changed()
+        }
         evaluate()
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+
+    private fun locked(): Boolean = getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == true
+
+    /** A key on the built-in keyboard went down (from the hold service): judged against the light for the log. */
+    fun keyPressed() {
+        worker.post {
+            val now = SystemClock.elapsedRealtime()
+            // One key a second is enough to judge; nothing about the key itself is kept.
+            if (now - keyLoggedAt < 1_000L) return@post
+            keyLoggedAt = now
+            trigger = "key"
+            evaluate()
+        }
+    }
 
     private fun themeDark(): Boolean =
         (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
@@ -189,6 +225,8 @@ class LightService : Service(), SensorEventListener {
         policy.tick(SystemClock.elapsedRealtime())
         settings = settingsKey()
         val link = Link.current(this)
+        if (seenLinkAt >= 0 && link.lastAt != seenLinkAt) trigger = if (link.typing) "TitanKeys-TYPING" else trigger ?: "TitanKeys-stopped"
+        seenLinkAt = link.lastAt
         val titanKeys = HoldPause.pausedFor(Settings.Secure.getString(contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD))
         val darkness = Prefs.darkness(this)
         val nightTyping = Prefs.on(this, Prefs.LIGHT_NIGHT_TYPING) && Prefs.on(this, Prefs.NIGHT_ACTIVE)
@@ -258,10 +296,14 @@ class LightService : Service(), SensorEventListener {
             // settings, which Titan Tools then uses instead of taking turns with it.
             assertedAt = SystemClock.elapsedRealtime()
             level = LightRecovery.own(this, true, level)
-            try { Shell.light(level) } catch (error: Exception) { Log.w(TAG, "Couldn't write the light again", error) }
+            try { Shell.light(level) } catch (error: Exception) {
+                Log.w(TAG, "Couldn't write the light again", error)
+                LightLog.write("FAIL rewrite light", "level=$level: ${error.javaClass.simpleName}: ${error.message}")
+            }
         }
         // While Night mode makes it Typing, the card says so.
         if (nightTyping && !status.startsWith("Paused") && Prefs.preset(this) != LightRule.Preset.PhonesOwn) status = "Night mode: only while typing"
+        logDecision(status, source, dark, wantLit, wantLevel, ready, link, now, nightTyping, activity)
         Status.light(status, source == LightRule.Source.LinkTyping || source == LightRule.Source.LinkField)
         updateNotification(Status.lightText)
 
@@ -279,6 +321,36 @@ class LightService : Service(), SensorEventListener {
     }
 
     /**
+     * The decision log: a line whenever the decision or its reason changes, and one for each trigger (a key press or a
+     * TitanKeys message) saying whether the light was on, and why not when it wasn't.
+     */
+    private fun logDecision(status: String, source: LightRule.Source, dark: Boolean, wantLit: Boolean, wantLevel: Boolean,
+                            ready: Boolean, link: LightRule.Link, now: Long, nightTyping: Boolean, activity: LightRule.Activity) {
+        val policy = policy
+        val linkAge = if (link.lastAt > 0) "${(now - link.lastAt) / 1000}s" else "never"
+        val details = "status=\"$status\" lit=$lit want=$wantLit level=${if (wantLevel) level else 0} dark=$dark " +
+            "lux=${policy?.lux()} darkBelow=$darkLux sensor=${policy?.reason()} screen=$screenOn locked=${locked()} " +
+            "night=${Prefs.on(this, Prefs.NIGHT_ACTIVE)} nightTyping=$nightTyping activity=${activity.id} source=$source " +
+            "link=${LightRule.alive(link, now)} linkTyping=${link.typing} lastLink=$linkAge stay=${Prefs.staySeconds(this)}s " +
+            "shizuku=${Shizuku.running()}/${Shizuku.allowed()} ready=$ready unsupported=$unsupported field=$fieldOpen"
+        val decision = "$status/$lit/$wantLit/$wantLevel/$dark/$source/$screenOn/$ready"
+        if (decision != loggedDecision) {
+            loggedDecision = decision
+            LightLog.write("decide", details)
+        }
+        val what = trigger ?: return
+        trigger = null
+        when {
+            lit -> LightLog.write("trigger $what", "lit")
+            what == "TitanKeys-stopped" -> Unit
+            source == LightRule.Source.FirmwareKeys && wantLevel -> LightLog.write("trigger $what", "firmware lights on keys at level $level")
+            // Not dark or the screen off: off as meant, but still noted with the reason, in case the reading was wrong.
+            !dark || !screenOn -> LightLog.write("trigger $what", "off: $details")
+            else -> LightLog.write("MISS $what", "stayed off: $details")
+        }
+    }
+
+    /**
      * Sets Titan Tools' light: the firmware's own settings first (VendorKeys: its stored level, which it writes on every key
      * press, the timeout and the automatic light off), then one direct write so it changes at once. Checked again every minute.
      */
@@ -292,7 +364,9 @@ class LightService : Service(), SensorEventListener {
             if (wantLevel) LightJournal.markLit(this)
             level = LightRecovery.own(this, wantLevel, level, timeout)
             if (wantLit && (!lit || key != applied)) {
-                if (!Shell.light(level)) {
+                val took = Shell.light(level)
+                LightLog.write("write light", "level=$level ${if (took) "ok" else "REFUSED by firmware"}")
+                if (!took) {
                     // The firmware said no: this phone or firmware doesn't have the call. Never try to fight it.
                     unsupported = true
                     LightRecovery.own(this, false, level, timeout)
@@ -304,18 +378,21 @@ class LightService : Service(), SensorEventListener {
                 }
                 assertedAt = SystemClock.elapsedRealtime()
             } else if (!wantLit && (lit || (levelWas && !wantLevel))) {
-                Shell.light(0)
+                val took = Shell.light(0)
+                LightLog.write("write light", "level=0 ${if (took) "ok" else "REFUSED by firmware"}")
             }
             lit = wantLit
             if (!wantLevel) LightJournal.markOff(this)
             applied = key
         } catch (error: Exception) {
             Log.w(TAG, "Couldn't set the keyboard light", error)
+            LightLog.write("FAIL write light", "want=$wantLit level=$wantLevel: ${error.javaClass.simpleName}: ${error.message}")
             applied = null
         }
     }
 
     private fun shutDown() {
+        LightLog.write("service off", "switch off")
         unregisterSensor()
         worker.removeCallbacksAndMessages(null)
         if (lit || LightJournal.lit(this)) try { Shell.light(0) } catch (ignored: Exception) {}
@@ -359,6 +436,7 @@ class LightService : Service(), SensorEventListener {
 
     override fun onDestroy() {
         instance = null
+        LightLog.write("service destroyed")
         stopListening.forEach { it() }
         try { unregisterReceiver(screenReceiver) } catch (ignored: Exception) {}
         unregisterSensor()

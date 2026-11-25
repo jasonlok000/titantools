@@ -194,7 +194,7 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
                 .remove(Prefs.LIGHT_LEVEL).remove(Prefs.LIGHT_LEVEL_NAME)
             Prefs.LIGHT_WHEN -> editor.putString(key, if (value == "typing") "typing" else "screen")
             Prefs.LIGHT_STAY_SECONDS -> editor.putInt(key, (value as Number).toInt().takeIf { it in Prefs.STAY_SECONDS } ?: Prefs.DEFAULT_STAY_SECONDS)
-            Prefs.LIGHT_DARK_LUX -> editor.putFloat(key, (value as Number).toFloat().takeIf { it in Prefs.DARK_LUX } ?: Prefs.DEFAULT_DARK_LUX)
+            Prefs.LIGHT_DARK_LUX -> editor.putFloat(key, (value as Number).toFloat().takeIf { it in Prefs.DARK_LUX_RANGE } ?: Prefs.DEFAULT_DARK_LUX)
             Prefs.HOLD_MILLIS -> editor.putInt(key, (value as Number).toInt().takeIf { it in Prefs.HOLD_TIMES } ?: Prefs.DEFAULT_HOLD_MILLIS)
             Prefs.PHONE_DPI, Prefs.TABLET_DPI -> {
                 val dpi = (value as Number).toInt()
@@ -338,7 +338,8 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
                 .put("anyTime", darkness.anyTime).put("nightFrom", Prefs.nightFrom(activity)).put("nightTo", Prefs.nightTo(activity))
                 .put("staySeconds", Prefs.staySeconds(activity)).put("nightTyping", prefs.getBoolean(Prefs.LIGHT_NIGHT_TYPING, false)).put("titanKeysKeyboard", titanKeysKeyboard)
                 .put("keyPresses", source == LightRule.Source.FirmwareKeys)
-                .put("linkSeen", link.seen).put("linkAlive", LightRule.alive(link, now)))
+                .put("linkSeen", link.seen).put("linkAlive", LightRule.alive(link, now))
+                .put("roomLux", LightService.instance?.roomLux?.takeIf { it.isFinite() }?.toDouble() ?: JSONObject.NULL))
             .put("scale", JSONObject().put("on", scaleOn).put("status", scaleStatus)
                 .put("phoneDpi", prefs.getInt(Prefs.PHONE_DPI, 0)).put("tabletDpi", prefs.getInt(Prefs.TABLET_DPI, 0)))
             .put("hold", JSONObject().put("on", holdOn).put("status", holdStatus).put("accessibility", accessibility)

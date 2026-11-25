@@ -1,23 +1,28 @@
-import { Screen, Section, SettingsChoices, Toggle, useSnapshot } from "ink";
-import { clock, set, state, type LightActivity, type LightPreset } from "../lib/titantools";
+import { Screen, Section, SettingsChoices, Text, Toggle, useSnapshot } from "ink";
+import { clock, levelPercent, luxPercent, percentLevel, percentLux, presetName, set, state, type LightActivity, type LightPreset } from "../lib/titantools";
+import { SegmentSlider } from "../lib/slider";
+import { DescribedChoices } from "../lib/choices";
 import { Note } from "../lib/note";
 
-const presets: { value: LightPreset; label: string }[] = [
-  { value: "night_typing", label: "Night typing" },
-  { value: "always_dark", label: "Always in the dark" },
-  { value: "phone", label: "Phone's own" },
-  { value: "custom", label: "Custom" },
+const presetIds: LightPreset[] = ["night_typing", "always_dark", "phone", "custom"];
+/** One plain line for each preset: exactly when the keys light. */
+const presetNotes: Record<LightPreset, string> = {
+  night_typing: "The room is dark and you're typing; off the rest of the time.",
+  always_dark: "The room is dark and the screen is on.",
+  phone: "The phone's own key light settings; Titan Tools stays out.",
+  custom: "Pick when and what below.",
+};
+const presets = presetIds.map(value => ({ value, label: presetName(value), note: presetNotes[value] }));
+
+const activities: { value: LightActivity; label: string; note: string }[] = [
+  { value: "screen", label: "Screen on", note: "Lit the whole time the screen is on." },
+  { value: "field", label: "Text field open", note: "Lit while a box you can type in is open." },
+  { value: "typing", label: "Typing", note: "Lit as you type, off after the stay time." },
 ];
 
-const activities: { value: LightActivity; label: string }[] = [
-  { value: "screen", label: "Screen on" },
-  { value: "field", label: "Text field open" },
-  { value: "typing", label: "Typing" },
-];
-
-const levels = [11, 16, 24, 32, 48, 64, 96, 128, 160, 200, 255];
-const levelLabel = (level: number) => level === 4 ? "4, dimmest" : level === 255 ? "255, brightest" : String(level);
-const darkness = [1, 3, 5, 10, 20, 30, 50, 100];
+/** Brightness: 5% to 100% in steps of 5. Dark room: 0% to 100% of the lux scale in steps of 5. */
+const LEVEL_STEPS = 20;
+const LUX_STEPS = 21;
 const halfHours = Array.from({ length: 48 }, (_, i) => i * 30);
 
 /** "Light the keys when [darkness] and [activity]", with presets on top. */
@@ -31,41 +36,51 @@ export default function Light() {
   const stay = stays.includes(light.staySeconds) ? light.staySeconds : 1;
   return <Screen title="Keyboard light" subtitle={light.status}>
     <Section title="Light the keys">
-      <SettingsChoices<LightPreset> value={light.preset} options={presets} onChange={value => void set("light_preset", value)} />
-      {light.preset === "phone" && <Note>The phone's own key light settings are back in charge.</Note>}
+      <DescribedChoices<LightPreset> value={light.preset} options={presets} onChange={value => void set("light_preset", value)} />
     </Section>
     {custom && <Section title="When it's">
-      <Toggle label="A dark room" value={light.darkRoom} onChange={on => void set("light_dark_room", on)} />
+      <Note>The keys light when any one of these is true.</Note>
+      <Toggle label="A dark room" subtitle="The light sensor reads below the dark room level." value={light.darkRoom} onChange={on => void set("light_dark_room", on)} />
       <Toggle label="Night hours" subtitle={`${clock(light.nightFrom)} to ${clock(light.nightTo)}`} value={light.nightHours}
         onChange={on => void set("light_night_hours", on)} />
-      <Toggle label="Dark theme on" value={light.darkTheme} onChange={on => void set("light_dark_theme", on)} />
-      <Toggle label="Any time" value={light.anyTime} onChange={on => void set("light_any_time", on)} />
+      <Toggle label="Dark theme on" subtitle="The phone's dark theme is on." value={light.darkTheme} onChange={on => void set("light_dark_theme", on)} />
+      <Toggle label="Any time" subtitle="Day or night, bright or dark." value={light.anyTime} onChange={on => void set("light_any_time", on)} />
       {!light.darkRoom && !light.nightHours && !light.darkTheme && !light.anyTime && <Note>Pick at least one, or the keys never light.</Note>}
     </Section>}
     {custom && <Section title="And">
-      <SettingsChoices<LightActivity> value={light.activity} options={activities} onChange={value => void set("light_activity", value)} />
+      <DescribedChoices<LightActivity> value={light.activity} options={activities} onChange={value => void set("light_activity", value)} />
       {light.activity !== "screen" && light.titanKeysKeyboard && !light.linkSeen &&
         <Note>Waiting for TitanKeys: type something with it.</Note>}
       {light.activity === "typing" && light.keyPresses && !(light.titanKeysKeyboard && !light.linkSeen) &&
         <Note>Without TitanKeys as your keyboard, key presses light the keys.</Note>}
     </Section>}
-    {light.preset !== "phone" && <Section title="Night mode">
-      <Toggle label="Only while typing in Night mode" value={light.nightTyping} onChange={on => void set("light_night_typing", on)} />
-      <Note>While Titan Tools' Night mode is on, the keys light only as you type.</Note>
-    </Section>}
+    {light.preset !== "phone" && light.nightTyping && <Note>While Titan Tools' Night mode is on, the keys light only as you type, whatever you picked above (set in Night mode).</Note>}
     {light.preset !== "phone" && (light.activity !== "screen" || light.nightTyping) && <Section title="Stay lit after">
       <SettingsChoices value={String(stay)} options={stays.map(s => ({ value: String(s), label: `${s} seconds` }))}
         onChange={value => void set("light_stay_seconds", Number(value))} />
+      <Note>How long the keys stay lit after you stop typing or close the text box.</Note>
       {light.activity === "typing" && light.keyPresses && <Note>No 0 with key presses: they keep the light on at least a second.</Note>}
     </Section>}
     {light.preset !== "phone" && <Section title="Brightness">
-      <SettingsChoices value={String(light.levelChoice)} options={levels.map(l => ({ value: String(l), label: levelLabel(l) }))}
-        onChange={value => void set("light_level", Number(value))} />
-      {light.level !== light.levelChoice && <Note>{`Now ${light.level}, set in the phone's own settings.`}</Note>}
+      <Text size={28}>{`${levelPercent(light.level)}%`}</Text>
+      <SegmentSlider count={LEVEL_STEPS} value={Math.min(LEVEL_STEPS, Math.max(1, Math.round(levelPercent(light.level) / 5))) - 1}
+        onPick={index => {
+          const level = percentLevel((index + 1) * 5);
+          if (level !== light.level) void set("light_level", level);
+        }} />
+      <Note>How bright the keys are when lit: 100% is the brightest the keyboard goes. Tap or drag along the bar; lit keys change as you go.</Note>
     </Section>}
     {light.preset !== "phone" && light.darkRoom && <Section title="Dark room below">
-      <SettingsChoices value={String(light.darkLux)} options={darkness.map(d => ({ value: String(d), label: `${d} lux` }))}
-        onChange={value => void set("light_dark_lux", Number(value))} />
+      <Text size={28}>{`${luxPercent(light.darkLux)}%`}</Text>
+      <SegmentSlider count={LUX_STEPS} value={Math.round(luxPercent(light.darkLux) / 5)}
+        marker={light.roomLux == null ? null : luxPercent(light.roomLux) / 5}
+        onPick={index => {
+          const lux = percentLux(index * 5);
+          if (lux !== light.darkLux) void set("light_dark_lux", lux);
+        }} />
+      <Note>How dark the room must be: the keys count it as dark below this. Lower means darker. Tap or drag along the bar.</Note>
+      <Note>{light.roomLux == null ? "Your room now: shown while the light is on and the screen is on."
+        : `Your room now (blue line): ${luxPercent(light.roomLux)}%, ${light.roomLux < light.darkLux ? "dark" : "bright"}. Set the bar just above it to light the keys here.`}</Note>
     </Section>}
     {custom && light.nightHours && <Section title="Night from">
       <SettingsChoices value={String(light.nightFrom)} options={halfHours.map(m => ({ value: String(m), label: clock(m) }))}

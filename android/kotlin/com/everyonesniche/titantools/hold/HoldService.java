@@ -179,6 +179,11 @@ public final class HoldService extends AccessibilityService
     private boolean handle(KeyEvent e) {
         int action = e.getAction(), key = e.getKeyCode();
         if (!physical(e) || (action != KeyEvent.ACTION_DOWN && action != KeyEvent.ACTION_UP)) return false;
+        if (action == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0) {
+            // The keyboard light's log notes that a key went down (never which one).
+            com.everyonesniche.titantools.light.LightService light = com.everyonesniche.titantools.light.LightService.Companion.getInstance();
+            if (light != null) light.keyPressed();
+        }
         long now = SystemClock.uptimeMillis();
         boolean mod = modifierKey(key);
         if (action == KeyEvent.ACTION_UP) return engine.up(key, e.getDeviceId(), e.getEventTime(), mod);

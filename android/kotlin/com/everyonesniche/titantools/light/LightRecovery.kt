@@ -70,9 +70,11 @@ object LightRecovery {
                     com.everyonesniche.titantools.core.Status.changed()
                 }
             }
+            LightLog.write("firmware", "timeout=$timeoutNow led=$led intelligent=$intelligent want=${if (lit) use else 0}/$timeout")
             for (write in VendorKeys.ownWrites(timeoutNow, led, intelligent, timeout, VendorKeys.ledValue(lit, use))) {
                 val done = Shell.writeVendor(write.key, write.value)
                 Log.i(TAG, "${write.key} = ${write.value}: ${if (done) "done" else "didn't read back"}")
+                LightLog.write("firmware write", "${write.key}=${write.value} ${if (done) "ok" else "DIDN'T READ BACK"}")
                 if (write.key == VendorKeys.LED && done) {
                     led = write.value
                     prefs.edit().putString(Prefs.LED_WRITTEN, write.value).commit()
@@ -83,6 +85,7 @@ object LightRecovery {
                 prefs.edit().putString(Prefs.LED_WRITTEN, led.trim()).commit()
         } catch (error: Exception) {
             Log.w(TAG, "Couldn't set the firmware's key light; the direct writes still work", error)
+            LightLog.write("FAIL firmware", "${error.javaClass.simpleName}: ${error.message}")
         }
         return use
     }
