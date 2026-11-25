@@ -4,7 +4,6 @@ import android.app.Activity
 import android.os.Bundle
 import android.view.View
 import android.view.WindowManager
-import android.widget.Toast
 
 /** The "Rotate" launcher entry, there while the Rotation tool is on: opening it flips the screen, says which way, and closes. */
 class RotateActivity : Activity() {
@@ -19,7 +18,7 @@ class RotateActivity : Activity() {
             return
         }
         Rotation.flip(this) { message ->
-            Toast.makeText(applicationContext, message, Toast.LENGTH_SHORT).show()
+            com.everyonesniche.titantools.core.Feedback.say(this, message)
             close()
         }
     }

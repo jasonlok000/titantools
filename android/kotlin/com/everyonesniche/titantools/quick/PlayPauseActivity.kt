@@ -9,8 +9,10 @@ import com.everyonesniche.titantools.core.Prefs
 class PlayPauseActivity : QuickActivity() {
     override fun act(done: (String?) -> Unit) {
         if (!Prefs.on(this, Prefs.PLAY_ON)) return done("Play/Pause is off. Turn it on in Titan Tools.")
+        // Music playing now means this press pauses it; otherwise it plays (the app decides, so it's a good guess).
+        val playing = getSystemService(AudioManager::class.java)?.isMusicActive == true
         send(this)
-        done(null)
+        done(if (playing) "Paused" else "Playing")
     }
 
     companion object {

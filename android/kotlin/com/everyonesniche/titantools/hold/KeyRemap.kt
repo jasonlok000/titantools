@@ -7,39 +7,22 @@ import android.content.pm.PackageManager
 import android.view.KeyEvent
 import com.everyonesniche.titantools.core.Prefs
 import com.everyonesniche.titantools.quick.TriggerActivity
-import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Keys for actions (docs/key-remap-plan.md): hold a key, or press it twice, to open an app, run one of Titan Tools' actions or
- * a system action. Only while you aren't typing. Any key the Accessibility key filter gets can have them: the letters, Back,
- * Sym, fn, and keys added by pressing them (the side key, Recents …).
+ * Keys for actions, kept simple like Key Mapper (owner, 2026-11-24): hold a letter, A to Z, to open an app or run an action,
+ * only while no text field is open. No special buttons and no double presses.
  *
- * Without Shizuku the first press can't be held back and sent later, so it goes to the app as usual; with Shizuku it's held
- * back and sent again when it turns out to be a plain click (HoldService.remap).
- *
- * Saved as JSON objects, key code → action id, one for holds and one for double presses: "app:<package>",
- * "do:<TriggerActivity action>", "widget:<1-5>" or "global:<home|back|recents|notifications|quick|lock|screenshot>".
+ * Saved as a JSON object, key code → action id: "app:<package>", "do:<TriggerActivity action>", "widget:<1-5>" or
+ * "global:<home|back|recents|notifications|quick|lock|screenshot>".
  */
 object KeyRemap {
     const val ON = "remap_on"
     const val MAP = "remap_map"
-    const val DOUBLE = "remap_double"
-    const val EXTRA_KEYS = "remap_extra_keys"
     const val HOLD = "remap_hold_millis"
     val HOLD_TIMES = listOf(400, 500, 700, 1000)
     const val DEFAULT_HOLD = 500
-    /** The second press of a double press comes within this. */
-    const val DOUBLE_MILLIS = 300L
 
-    /**
-     * The side key: scancode 249 on mtk-pmic-keys, "key 249 FUNC1" in the phone's Generic.kl. The framework has no name for
-     * it, so keyCodeFromString finds nothing; Titan Tools' key filter sees it as key code 401 (light log, 2026-11-24).
-     */
-    val FUNC1: Int = KeyEvent.keyCodeFromString("KEYCODE_FUNC1").takeIf { it > 0 } ?: 401
-
-    /** The keys offered without adding them: the letters, then the side key (Func1), Back, Sym and fn. */
-    val SPECIALS = listOfNotNull(FUNC1.takeIf { it > 0 }, KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_SYM, KeyEvent.KEYCODE_FUNCTION)
     val LETTERS = (KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z).toList()
 
     val GLOBALS = linkedMapOf(
@@ -52,71 +35,27 @@ object KeyRemap {
         "screenshot" to ("Screenshot" to AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT),
     )
 
-    /**
-     * The phone's own shortcut functions (com.agui.shortcutsettings' ShortcutFunctionReceiver, exported without a permission):
-     * a broadcast of com.agui.action.SHORTCUT_FUNCTION with "shortcut_function" set to the function's name. Read from the
-     * phone's app on 2026-11-24: Shortcut_function11 toggles Mini mode (agui_mini_mode_enable).
-     *
-     * Not offered: com.agui.action.SHORTCUT_FUNCTION is a protected broadcast, so only the system may send it (even adb's
-     * shell user is refused, 2026-11-24). Kept empty so a saved "phone:" action from build 31 just does nothing.
-     */
-    val PHONE = linkedMapOf<String, Pair<String, String>>()
-    private const val PHONE_PACKAGE = "com.agui.shortcutsettings"
-    private const val PHONE_ACTION = "com.agui.action.SHORTCUT_FUNCTION"
-
     fun on(context: Context): Boolean = Prefs.of(context).getBoolean(ON, false)
 
     fun holdMillis(context: Context): Int = Prefs.of(context).getInt(HOLD, DEFAULT_HOLD).takeIf { it in HOLD_TIMES } ?: DEFAULT_HOLD
 
-    private fun read(context: Context, name: String): Map<Int, String> {
-        val json = try { JSONObject(Prefs.of(context).getString(name, null) ?: "{}") } catch (error: Exception) { JSONObject() }
-        return json.keys().asSequence().mapNotNull { k -> k.toIntOrNull()?.let { it to json.getString(k) } }.toMap()
+    /** The letters' actions. Anything saved for another key by builds 29–40 is left out. */
+    fun map(context: Context): Map<Int, String> {
+        val json = try { JSONObject(Prefs.of(context).getString(MAP, null) ?: "{}") } catch (error: Exception) { JSONObject() }
+        return json.keys().asSequence().mapNotNull { k -> k.toIntOrNull()?.takeIf { it in LETTERS }?.let { it to json.getString(k) } }.toMap()
     }
 
-    fun map(context: Context): Map<Int, String> = read(context, MAP)
-    fun doubles(context: Context): Map<Int, String> = read(context, DOUBLE).filterKeys { it !in LETTERS }
+    fun name(keyCode: Int): String = ('A' + (keyCode - KeyEvent.KEYCODE_A)).toString()
 
-    /** Keys added by pressing them. */
-    fun extraKeys(context: Context): List<Int> {
-        val json = try { JSONArray(Prefs.of(context).getString(EXTRA_KEYS, null) ?: "[]") } catch (error: Exception) { JSONArray() }
-        return (0 until json.length()).map { json.getInt(it) }
-    }
-
-    fun addKey(context: Context, keyCode: Int) {
-        if (keyCode in LETTERS || keyCode in SPECIALS || keyCode in extraKeys(context) || !usable(keyCode)) return
-        Prefs.of(context).edit().putString(EXTRA_KEYS, JSONArray(extraKeys(context) + keyCode).toString()).apply()
-    }
-
-    /** All the keys the screen lists. */
-    fun keys(context: Context): List<Int> = LETTERS + SPECIALS + extraKeys(context)
-
-    /** Never the power or volume keys: the phone needs them. */
-    fun usable(keyCode: Int): Boolean = keyCode in 1..400 && keyCode != KeyEvent.KEYCODE_POWER &&
-        keyCode != KeyEvent.KEYCODE_VOLUME_UP && keyCode != KeyEvent.KEYCODE_VOLUME_DOWN && keyCode != KeyEvent.KEYCODE_UNKNOWN
-
-    fun name(keyCode: Int): String = when (keyCode) {
-        in LETTERS -> ('A' + (keyCode - KeyEvent.KEYCODE_A)).toString()
-        FUNC1 -> "Func1 (side key)"
-        KeyEvent.KEYCODE_BACK -> "Back"
-        KeyEvent.KEYCODE_SYM -> "Sym"
-        KeyEvent.KEYCODE_FUNCTION -> "fn"
-        KeyEvent.KEYCODE_HOME -> "Home"
-        KeyEvent.KEYCODE_APP_SWITCH -> "Recents"
-        else -> KeyEvent.keyCodeToString(keyCode).removePrefix("KEYCODE_").lowercase().replace('_', ' ')
-            .replaceFirstChar { it.uppercase() }
-    }
-
-    /** Sets or clears ([action] empty) the [double] press or hold action of [keyCode]. */
-    fun set(context: Context, keyCode: Int, action: String, double: Boolean) {
-        require(usable(keyCode)) { "Not a key that can have an action" }
+    /** Sets or clears ([action] empty) letter [keyCode]'s hold action. */
+    fun set(context: Context, keyCode: Int, action: String) {
+        require(keyCode in LETTERS) { "Only letter keys" }
         require(action.isEmpty() || valid(action)) { "Unknown action" }
-        // Letters are hold-only (owner): double presses are for special buttons like Func1.
-        require(!double || keyCode !in LETTERS || action.isEmpty()) { "Letters only have holds" }
-        val next = (if (double) doubles(context) else map(context)).toMutableMap()
+        val next = map(context).toMutableMap()
         if (action.isEmpty()) next.remove(keyCode) else next[keyCode] = action
         val json = JSONObject()
         next.forEach { (k, v) -> json.put(k.toString(), v) }
-        Prefs.of(context).edit().putString(if (double) DOUBLE else MAP, json.toString()).apply()
+        Prefs.of(context).edit().putString(MAP, json.toString()).apply()
     }
 
     fun valid(action: String): Boolean = when {
@@ -124,7 +63,6 @@ object KeyRemap {
         action.startsWith("do:") -> action.removePrefix("do:") in TriggerActivity.ACTIONS
         action.startsWith("widget:") -> action.removePrefix("widget:").toIntOrNull() in 1..5
         action.startsWith("global:") -> action.removePrefix("global:") in GLOBALS
-        action.startsWith("phone:") -> action.removePrefix("phone:") in PHONE
         else -> false
     }
 
@@ -140,24 +78,27 @@ object KeyRemap {
             if (app.isNullOrBlank()) "Widget $slot" else "Widget $slot – $app"
         }
         action.startsWith("global:") -> GLOBALS[action.removePrefix("global:")]?.first ?: action
-        action.startsWith("phone:") -> PHONE[action.removePrefix("phone:")]?.first ?: action
         else -> action
     }
 
     /** Runs [action] from the Accessibility service. False when it couldn't. */
     fun run(service: AccessibilityService, action: String): Boolean = try {
         when {
-            action.startsWith("app:") -> service.packageManager.getLaunchIntentForPackage(action.removePrefix("app:"))
-                ?.let { service.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); true } ?: false
+            action.startsWith("app:") -> service.packageManager.getLaunchIntentForPackage(action.removePrefix("app:"))?.let {
+                service.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                com.everyonesniche.titantools.core.Feedback.say(service, label(service, action).replaceFirst("Open ", "Opened "))
+                true
+            } ?: false
             action.startsWith("do:") -> TriggerActivity.target(service, Intent().putExtra(TriggerActivity.EXTRA_ACTION, action.removePrefix("do:")))
                 ?.let { service.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); true } ?: false
             action.startsWith("widget:") -> TriggerActivity.target(service, Intent().putExtra(TriggerActivity.EXTRA_ACTION, "widget")
                 .putExtra(TriggerActivity.EXTRA_SLOT, action.removePrefix("widget:").toInt()))
                 ?.let { service.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); true } ?: false
-            action.startsWith("global:") -> GLOBALS[action.removePrefix("global:")]?.let { service.performGlobalAction(it.second) } ?: false
-            action.startsWith("phone:") -> PHONE[action.removePrefix("phone:")]?.let {
-                service.sendBroadcast(Intent(PHONE_ACTION).setPackage(PHONE_PACKAGE).putExtra("shortcut_function", it.second))
-                true
+            action.startsWith("global:") -> GLOBALS[action.removePrefix("global:")]?.let {
+                val done = service.performGlobalAction(it.second)
+                // Home, Back and screenshot speak for themselves; the panels and the lock get a word.
+                if (done && action.removePrefix("global:") in listOf("notifications", "quick", "recents")) com.everyonesniche.titantools.core.Feedback.say(service, it.first)
+                done
             } ?: false
             else -> false
         }

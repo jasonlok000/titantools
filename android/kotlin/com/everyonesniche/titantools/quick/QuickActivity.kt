@@ -4,7 +4,6 @@ import android.app.Activity
 import android.os.Bundle
 import android.view.View
 import android.view.WindowManager
-import android.widget.Toast
 
 /**
  * A launcher entry with no screen, for Shortcut keys and the side button: opening it does one thing, says what in a short
@@ -25,7 +24,7 @@ abstract class QuickActivity : Activity() {
             return
         }
         act { message ->
-            if (message != null) Toast.makeText(applicationContext, message, Toast.LENGTH_SHORT).show()
+            com.everyonesniche.titantools.core.Feedback.say(this, message)
             close()
         }
     }

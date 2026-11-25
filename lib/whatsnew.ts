@@ -3,8 +3,13 @@
  * own shows the newest entry at or below it. Add one for every build handed out.
  */
 const notes: Record<number, string[]> = {
+  41: [
+    "Hold a letter for an action, on the home screen and in apps. With Shizuku the letter never types.",
+    "Every action says what it did, like Flashlight on or Portrait, and feels different for on and off.",
+    "Scale Toggle: pick a preset size or type your own.",
+  ],
   29: [
-    "Keys for actions: hold a letter to open an app or run an action; special buttons like Func1 can also be pressed twice.",
+    "Keys for actions: hold a letter to open an app or run an action, like Key Mapper.",
     "Keyboard light: new modes, In the dark while a text box is open, and While typing (or swiping). Typing now means keys and swipes, not a box opening.",
     "A new version now also shows a message when you open Titan Tools.",
   ],

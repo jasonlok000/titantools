@@ -6,6 +6,6 @@ import com.everyonesniche.titantools.core.Prefs
 class FlashlightActivity : QuickActivity() {
     override fun act(done: (String?) -> Unit) {
         if (!Prefs.on(this, Prefs.FLASH_ON)) return done("Flashlight is off. Turn it on in Titan Tools.")
-        Torch.toggle(this) { done(null) }
+        Torch.toggle(this) { done(it) }
     }
 }

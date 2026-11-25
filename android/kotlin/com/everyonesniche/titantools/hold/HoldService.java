@@ -49,13 +49,9 @@ public final class HoldService extends AccessibilityService
     /** Hold a letter for an action (KeyRemap): the settings, and the key being watched (-1 for none). */
     private boolean remapOn, remapFired, remapSwallowed;
     private java.util.Map<Integer, String> remapMap = java.util.Collections.emptyMap();
-    private java.util.Map<Integer, String> remapDouble = java.util.Collections.emptyMap();
-    private int remapHold = KeyRemap.DEFAULT_HOLD, remapKey = -1, lastUpKey = -1, pendingClick = -1, learnUp = -1;
-    private long remapDownTime, lastUpAt, learnUntil;
-    private final java.util.Set<Integer> loggedCodes = new java.util.HashSet<>();
+    private int remapHold = KeyRemap.DEFAULT_HOLD, remapKey = -1;
+    private long remapDownTime;
     private int lastInputType;
-    /** A held-back click, sent once no second press came for a double press. */
-    private final Runnable sendClick = this::flushClick;
     /**
      * The hold's own timer, from the press's time: a held-back key gets no repeats (they follow the press the app never saw),
      * so the hold can't wait for them.
@@ -100,7 +96,6 @@ public final class HoldService extends AccessibilityService
     private void load() {
         remapOn = KeyRemap.INSTANCE.on(this);
         remapMap = KeyRemap.INSTANCE.map(this);
-        remapDouble = KeyRemap.INSTANCE.doubles(this);
         remapHold = KeyRemap.INSTANCE.holdMillis(this);
         enabled = prefs.getBoolean(Prefs.HOLD_ON, false);
         passwords = prefs.getBoolean(Prefs.HOLD_PASSWORDS, false);
@@ -212,10 +207,6 @@ public final class HoldService extends AccessibilityService
             // The keyboard light's log notes that a key went down (never which one).
             com.everyonesniche.titantools.light.LightService light = com.everyonesniche.titantools.light.LightService.Companion.getInstance();
             if (light != null) light.keyPressed();
-            // The log notes a special key's code the first time it's seen (never a printing key's, so nothing typed is kept).
-            if (!e.isPrintingKey() && loggedCodes.add(key))
-                com.everyonesniche.titantools.light.LightLog.INSTANCE.write("key code", key + " " + KeyEvent.keyCodeToString(key)
-                        + (key == KeyRemap.INSTANCE.getFUNC1() ? " (Func1, the side key)" : ""));
         }
         Boolean remapped = remap(e);
         if (remapped != null) return remapped;
@@ -249,7 +240,7 @@ public final class HoldService extends AccessibilityService
         com.everyonesniche.titantools.light.LightRule.Link link = com.everyonesniche.titantools.core.Link.INSTANCE.current(this);
         long now = System.currentTimeMillis();
         String typed = link.getTypedAt() > 0 ? ((now - link.getTypedAt()) / 1000.0) + "s" : "never";
-        return "key=" + (e.isPrintingKey() ? "letter" : KeyEvent.keyCodeToString(key))
+        return "key=letter"
                 + " field=" + (editorActive ? "text" : "none") + " inputType=0x" + Integer.toHexString(lastInputType)
                 + " started=" + (input != null && input.getCurrentInputStarted())
                 + " titanKeysTyped=" + typed + " home=" + link.getOnHome() + (link.getTypedAt() == link.getLastAt() ? "" : " (last was a field opening)")
@@ -260,47 +251,22 @@ public final class HoldService extends AccessibilityService
         com.everyonesniche.titantools.light.LightLog.INSTANCE.write(event, details);
     }
 
-    /** The next key pressed in the next 10 seconds is added to the screen's list, and goes nowhere else. */
-    public void learnKey() {
-        learnUntil = SystemClock.uptimeMillis() + 10_000;
-    }
-
-    private void flushClick() {
-        main.removeCallbacks(sendClick);
-        int key = pendingClick;
-        pendingClick = -1;
-        if (key != -1) KeyInjector.INSTANCE.press(key, 0);
-    }
-
     private void fire(String action) {
         boolean ran = action != null && KeyRemap.INSTANCE.run(this, action);
         if (!ran) log("key action failed", "the action didn't run");
-        if (ran && haptic) Haptic.INSTANCE.play(this, Haptic.INSTANCE.getCONFIRM());
     }
 
     /**
-     * Keys for actions: hold a key, or press it twice. Only while you aren't typing. When a trigger fires, the key's input is
-     * taken. With Shizuku the press is held back and sent again (KeyInjector) when it turns out to be a click, after the double
-     * press time when the key has a double press. Without Shizuku the first press goes on to the app (it can't be sent later),
-     * then the hold's repeats, a double press's second press and the release are taken.
+     * Keys for actions: hold a letter for its action, only while no text field is open. A click is never changed.
+     * With Shizuku the press is held back: the hold timer runs the action (and the release is taken), or on an earlier release
+     * the click is sent again (KeyInjector). Without Shizuku the press goes on to the app (it can't be sent later); the repeats
+     * are taken and the action runs at the hold time.
      * Returns whether to take the event, or null when it isn't one of these keys.
      */
     private Boolean remap(KeyEvent e) {
         int key = e.getKeyCode();
-        boolean down = e.getAction() == KeyEvent.ACTION_DOWN;
         long now = e.getEventTime();
-        if (down && e.getRepeatCount() == 0 && learnUntil > SystemClock.uptimeMillis()) {
-            learnUntil = 0;
-            learnUp = key;
-            KeyRemap.INSTANCE.addKey(this, key);
-            Status.INSTANCE.changed();
-            return Boolean.TRUE;
-        }
-        if (key == learnUp) {
-            if (!down) learnUp = -1;
-            return Boolean.TRUE;
-        }
-        if (!down) {
+        if (e.getAction() == KeyEvent.ACTION_UP) {
             if (key != remapKey) return null;
             if (!remapFired && main.hasCallbacks(holdDue)) log("key hold timer cancelled", "released before " + remapHold + "ms");
             main.removeCallbacks(holdDue);
@@ -309,41 +275,18 @@ public final class HoldService extends AccessibilityService
             remapFired = false;
             remapSwallowed = false;
             if (fired) return Boolean.TRUE;
-            boolean hasDouble = remapDouble.containsKey(key);
-            if (hasDouble) { lastUpKey = key; lastUpAt = now; }
             if (!swallowed) return null;
-            // A held-back click: sent now, or after the double press time.
-            if (hasDouble) {
-                pendingClick = key;
-                main.postDelayed(sendClick, KeyRemap.DOUBLE_MILLIS);
-                log("key click waits for a second press", "");
-            } else {
-                boolean sent = KeyInjector.INSTANCE.press(key, 0);
-                log("key click sent again", sent ? "ok" : "FAILED");
-            }
+            boolean sent = KeyInjector.INSTANCE.press(key, 0);
+            log("key click sent again", sent ? "ok" : "FAILED");
             return Boolean.TRUE;
         }
         if (e.getRepeatCount() == 0) {
             remapKey = -1;
             remapFired = false;
             remapSwallowed = false;
-            String hold = remapMap.get(key), twice = remapDouble.get(key);
-            if (twice != null && key == lastUpKey && now - lastUpAt <= KeyRemap.DOUBLE_MILLIS && remapOn) {
-                // The second press: the held-back click is dropped, the action runs, the press and its release are taken.
-                main.removeCallbacks(sendClick);
-                pendingClick = -1;
-                lastUpKey = -1;
-                remapKey = key;
-                remapFired = true;
-                log("key action fired", "pressed twice: " + facts(key, e));
-                fire(twice);
-                return Boolean.TRUE;
-            }
-            // Any other press: a waiting click goes first, so keys stay in order.
-            if (pendingClick != -1) flushClick();
-            lastUpKey = -1;
-            if (!remapOn || (hold == null && twice == null)) return null;
-            String why = (modified(e) && !modifierKey(key)) ? "a modifier is down" : !screenUsable ? "screen off or locked"
+            String hold = remapMap.get(key);
+            if (!remapOn || hold == null) return null;
+            String why = modified(e) ? "a modifier is down" : !screenUsable ? "screen off or locked"
                     : typing() ? "a text field is connected" : null;
             if (why != null) {
                 log("key action stood down", why + ": " + facts(key, e));
@@ -352,7 +295,7 @@ public final class HoldService extends AccessibilityService
             remapKey = key;
             remapDownTime = e.getDownTime();
             main.removeCallbacks(holdDue);
-            if (hold != null) main.postAtTime(holdDue, remapDownTime + remapHold);
+            main.postAtTime(holdDue, remapDownTime + remapHold);
             if (KeyInjector.INSTANCE.ready()) {
                 remapSwallowed = true;
                 log("key held back", facts(key, e));
@@ -363,14 +306,12 @@ public final class HoldService extends AccessibilityService
         }
         if (key != remapKey) return null;
         if (remapFired) return Boolean.TRUE;
-        String hold = remapMap.get(key);
-        // Only a double press: holding it does what it always did (repeats are lost only while held back).
-        if (hold == null) return remapSwallowed ? Boolean.TRUE : null;
-        // Its repeats never reach the app (no "aaaa" in a launcher search), before the hold time or after.
+        // Its repeats never reach the app (no "aaaa" in a launcher search); the hold timer runs the action.
         if (now - remapDownTime < remapHold) return Boolean.TRUE;
         remapFired = true;
+        main.removeCallbacks(holdDue);
         log("key action fired", "held " + (now - remapDownTime) + "ms: " + facts(key, e));
-        fire(hold);
+        fire(remapMap.get(key));
         return Boolean.TRUE;
     }
 

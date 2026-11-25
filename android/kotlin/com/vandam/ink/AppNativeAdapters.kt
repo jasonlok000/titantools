@@ -189,13 +189,7 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
             "lightSlider" -> activity.startActivity(Intent(activity, com.everyonesniche.titantools.light.SliderActivity::class.java)
                 .putExtra(com.everyonesniche.titantools.light.SliderActivity.EXTRA_KIND, data.getString("kind")))
             "remapSet" -> {
-                com.everyonesniche.titantools.hold.KeyRemap.set(activity, data.getInt("key"), data.getString("action"),
-                    data.optBoolean("double", false))
-                changed()
-            }
-            "remapLearn" -> {
-                val service = com.everyonesniche.titantools.hold.HoldService.live ?: throw IllegalStateException("Turn on Titan Tools in Accessibility first")
-                service.learnKey()
+                com.everyonesniche.titantools.hold.KeyRemap.set(activity, data.getInt("key"), data.getString("action"))
             }
             "seenWhatsNew" -> {
                 com.everyonesniche.titantools.core.Updates.seenWhatsNew(activity)
@@ -439,25 +433,13 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
             .put("oldApps", old)
             .put("remap", com.everyonesniche.titantools.hold.KeyRemap.let { remap ->
                 val holds = remap.map(activity)
-                val doubles = remap.doubles(activity)
-                fun action(id: String?) = id?.let { JSONObject().put("id", it).put("label", remap.label(activity, it)) } ?: JSONObject.NULL
                 val keys = JSONArray()
-                remap.keys(activity).forEach { code ->
-                    val native = com.everyonesniche.titantools.hold.NativeKeys.buttonFor(code)
-                        ?.let { com.everyonesniche.titantools.hold.NativeKeys.state(activity, it) }
-                    keys.put(JSONObject().put("code", code).put("name", remap.name(code)).put("hold", action(holds[code]))
-                        .put("double", action(doubles[code])).put("letter", code in remap.LETTERS)
-                        .put("native", native?.let { JSONObject().put("ok", it.ok).put("now", it.now).put("fix", it.fix ?: JSONObject.NULL) } ?: JSONObject.NULL))
-                }
-                // The phone's own special buttons, for the setup.
-                val buttons = JSONArray()
-                com.everyonesniche.titantools.hold.NativeKeys.BUTTONS.forEach { button ->
-                    com.everyonesniche.titantools.hold.NativeKeys.state(activity, button)?.let {
-                        buttons.put(JSONObject().put("label", it.label).put("ok", it.ok).put("now", it.now).put("fix", it.fix ?: JSONObject.NULL))
-                    }
+                remap.LETTERS.forEach { code ->
+                    keys.put(JSONObject().put("code", code).put("name", remap.name(code))
+                        .put("hold", holds[code]?.let { JSONObject().put("id", it).put("label", remap.label(activity, it)) } ?: JSONObject.NULL))
                 }
                 JSONObject().put("on", remap.on(activity)).put("holdMillis", remap.holdMillis(activity)).put("keys", keys)
-                    .put("service", accessibility).put("shizuku", ready).put("buttons", buttons)
+                    .put("service", accessibility).put("shizuku", ready)
             })
             .put("titanKeys", JSONObject().put("installed", Installed.has(activity, Installed.TITANKEYS))
                 .put("selected", HoldPause.pausedFor(defaultIme)))

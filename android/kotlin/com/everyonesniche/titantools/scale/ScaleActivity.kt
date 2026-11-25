@@ -74,7 +74,9 @@ class ScaleActivity : Activity() {
                     }
                 }
                 val target = ScaleController({ args -> Shell.wm(*args) }, store, {}, {}, presets(this)).toggle()
-                if (target == ScaleMath.COMPACT) "Tablet mode" else "Phone mode"
+                val sizes = com.everyonesniche.titantools.core.Prefs.of(this)
+                if (target == ScaleMath.COMPACT) "Tablet layout (${sizes.getInt(ScaleSettings.TABLET_DPI, 0).takeIf { it > 0 } ?: ScaleMath.TABLET_DENSITY} DPI)"
+                else "Phone layout (${sizes.getInt(ScaleSettings.PHONE_DPI, 0).takeIf { it > 0 } ?: ScaleMath.PHONE_DENSITY} DPI)"
             } catch (error: ScaleController.Failure) {
                 Log.e("TitanTools", "Scale Toggle failed at ${error.code}", error)
                 "Couldn't switch: ${error.cause?.message ?: error.code}".take(120)
@@ -91,7 +93,7 @@ class ScaleActivity : Activity() {
         finished = true
         main.removeCallbacks(waitForShizuku)
         stopListening?.invoke()
-        if (message != null) Toast.makeText(applicationContext, message, Toast.LENGTH_SHORT).show()
+        com.everyonesniche.titantools.core.Feedback.say(this, message)
         busy.set(false)
         close()
     }

@@ -42,7 +42,7 @@ export type State = {
   /** Update checks: on or off, a newer version found (or null), and the version code to show what's new for once (0 for none). */
   updates: { on: boolean; available: string | null; whatsNew: number };
   /** Keys for actions: on or off, the hold time, every key with its hold and double press actions, Accessibility and Shizuku. */
-  remap: { on: boolean; holdMillis: number; keys: RemapKey[]; service: boolean; shizuku: boolean; buttons: NativeButton[] };
+  remap: { on: boolean; holdMillis: number; keys: RemapKey[]; service: boolean; shizuku: boolean };
 };
 
 /** The settings the screens can change, by their native names (Prefs.kt). */
@@ -75,11 +75,9 @@ export async function set(key: Setting, value: boolean | number | string) {
 
 export const open = (target: Page) => native("open", { target });
 /** The native pop-up with a slider: brightness, or the dark room level. */
-export const openSlider = (kind: "level" | "dark") => native("lightSlider", { kind });
-/** Sets key [code]'s hold or [double] press action, or clears it with "". */
-export const setRemap = (code: number, action: string, double: boolean) => then(native("remapSet", { key: code, action, double }));
-/** The next key pressed (within 10 seconds) is added to the list. */
-export const learnKey = () => native("remapLearn");
+export const openSlider = (kind: "level" | "dark" | "dim") => native("lightSlider", { kind });
+/** Sets letter key [code]'s hold action, or clears it with "". */
+export const setRemap = (code: number, action: string) => then(native("remapSet", { key: code, action }));
 /** Every launchable app, for a hold to open. */
 export const listApps = async (): Promise<{ id: string; label: string }[]> => JSON.parse(await native("apps"));
 /** Opens the newer release's page. */
@@ -117,10 +115,7 @@ export const clock = (minutes: number) =>
 export const shortcutsOn = (s: State) => [s.scale.on, s.rotation.on, s.flash.on, s.night.on, s.play.on, s.kill.on].filter(Boolean).length + s.widgets.length;
 
 export type RemapAction = { id: string; label: string } | null;
-/** What the phone itself does with a special button: ready (Programmable key > None) or what to set. */
-export type NativeButton = { label: string; ok: boolean; now: string; fix: string | null };
-export type RemapKey = { code: number; name: string; hold: RemapAction; double: RemapAction; letter: boolean;
-  native: { ok: boolean; now: string; fix: string | null } | null };
+export type RemapKey = { code: number; name: string; hold: RemapAction };
 
 export type WidgetButton = { id: string; name: string; app: string; button: string; slot: number; ok: boolean };
 

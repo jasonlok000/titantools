@@ -1,8 +1,7 @@
-import { Screen, Section, SettingsChoices, Toggle, useSnapshot } from "ink";
-import { set, state } from "../lib/titantools";
+import { Field, Screen, Section, Toggle, useSnapshot } from "ink";
+import { openSlider, set, state } from "../lib/titantools";
 import { Note } from "../lib/note";
 
-const strengths = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 
 /** Night mode's options: one press turns on Night Light, and these with it. */
 export default function Night() {
@@ -15,10 +14,8 @@ export default function Night() {
       <Toggle label="Dark theme" value={night.darkTheme} onChange={on => void set("night_dark_theme", on)} />
     </Section>
     {night.extraDim && <Section title="Extra dim strength">
-      <SettingsChoices value={String(Math.round(night.dimLevel / 10) * 10)}
-        options={strengths.map(v => ({ value: String(v), label: v === 0 ? "0, least" : v === 100 ? "100, most" : String(v) }))}
-        onChange={value => void set("night_dim_level", Number(value))} />
-      <Note>Takes effect the next time Night mode goes on.</Note>
+      <Field label="Extra dim strength" onPress={() => void openSlider("dim")}>{`${night.dimLevel}%`}</Field>
+      <Note>How much Extra dim darkens the screen. Tap to slide it; while Night mode is on, it changes as you go.</Note>
     </Section>}
     {result.data.light.on && result.data.light.preset !== "phone" && <Section title="Keyboard light">
       <Toggle label="With Night mode on: only while typing" value={result.data.light.nightTyping}

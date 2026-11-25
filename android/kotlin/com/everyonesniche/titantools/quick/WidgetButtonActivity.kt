@@ -54,7 +54,8 @@ class WidgetButtonActivity : Activity() {
             val pressed = try { WidgetButton.press(target) } catch (error: Exception) { Log.w(TAG, "Widget button", error); false }
             Log.i(TAG, "Widget button ${picked.name}: ${if (pressed) "pressed" else "couldn't press"} (${WidgetButton.pressKind(target)})")
             // A moment for the widget's action to start before the host goes.
-            main.postDelayed({ close(if (pressed) null else "Pick the widget again in Titan Tools.") }, 600)
+            val said = if (picked.slot > 0) "Widget ${picked.slot} – ${picked.app}" else picked.name
+            main.postDelayed({ close(if (pressed) said else "Pick the widget again in Titan Tools.") }, 600)
             return
         }
         if (++tries >= 60) return close("Pick the widget again in Titan Tools.")
@@ -62,7 +63,7 @@ class WidgetButtonActivity : Activity() {
     }
 
     private fun close(message: String?) {
-        if (message != null) Toast.makeText(applicationContext, message, Toast.LENGTH_SHORT).show()
+        com.everyonesniche.titantools.core.Feedback.say(this, message)
         main.removeCallbacksAndMessages(null)
         try { host.stopListening() } catch (ignored: Exception) {}
         finishAndRemoveTask()
