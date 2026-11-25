@@ -46,6 +46,11 @@ public final class HoldService extends AccessibilityService
     private boolean enabled, passwords, haptic, dead, titanKeysSelected, oldAppOn;
     private boolean editorActive, editorPassword, screenUsable = true;
     private int threshold = Prefs.DEFAULT_HOLD_MILLIS;
+    /** Hold a letter for an action (KeyRemap): the settings, and the key being watched (-1 for none). */
+    private boolean remapOn, remapFired;
+    private java.util.Map<Integer, String> remapMap = java.util.Collections.emptyMap();
+    private int remapHold = KeyRemap.DEFAULT_HOLD, remapKey = -1;
+    private long remapDownTime;
 
     private final BroadcastReceiver screens = new BroadcastReceiver() {
         @Override public void onReceive(Context c, Intent i) {
@@ -74,6 +79,9 @@ public final class HoldService extends AccessibilityService
     }
 
     private void load() {
+        remapOn = KeyRemap.INSTANCE.on(this);
+        remapMap = KeyRemap.INSTANCE.map(this);
+        remapHold = KeyRemap.INSTANCE.holdMillis(this);
         enabled = prefs.getBoolean(Prefs.HOLD_ON, false);
         passwords = prefs.getBoolean(Prefs.HOLD_PASSWORDS, false);
         haptic = prefs.getBoolean(Prefs.HOLD_VIBRATE, true);
@@ -184,6 +192,8 @@ public final class HoldService extends AccessibilityService
             com.everyonesniche.titantools.light.LightService light = com.everyonesniche.titantools.light.LightService.Companion.getInstance();
             if (light != null) light.keyPressed();
         }
+        Boolean remapped = remap(e);
+        if (remapped != null) return remapped;
         long now = SystemClock.uptimeMillis();
         boolean mod = modifierKey(key);
         if (action == KeyEvent.ACTION_UP) return engine.up(key, e.getDeviceId(), e.getEventTime(), mod);
@@ -197,6 +207,50 @@ public final class HoldService extends AccessibilityService
             main.postAtTime(() -> engine.holdDue(id), p.downTime + threshold);
         }
         return consume;
+    }
+
+    /** You're typing: a text field has the focus, or TitanKeys said it's typing in the last 3 seconds. Then holds stay TitanKeys'. */
+    private boolean typing() {
+        if (editorActive && input != null && input.getCurrentInputStarted()) return true;
+        com.everyonesniche.titantools.light.LightRule.Link link = com.everyonesniche.titantools.core.Link.INSTANCE.current(this);
+        long age = System.currentTimeMillis() - link.getLastAt();
+        return link.getTyping() && age >= 0 && age < 3000;
+    }
+
+    /**
+     * Hold a letter for an action. The press always goes on to the app (a tap is untouched); while the key is still down
+     * after the hold time, its repeats run the action once, and the rest of its repeats and its release are taken.
+     * Returns whether to take the event, or null when it isn't one of these keys.
+     */
+    private Boolean remap(KeyEvent e) {
+        int key = e.getKeyCode();
+        if (e.getAction() == KeyEvent.ACTION_UP) {
+            if (key != remapKey) return null;
+            boolean fired = remapFired;
+            remapKey = -1;
+            remapFired = false;
+            return fired ? Boolean.TRUE : null;
+        }
+        if (e.getRepeatCount() == 0) {
+            remapKey = -1;
+            remapFired = false;
+            String action = remapMap.get(key);
+            if (!remapOn || action == null || modified(e) || !screenUsable || typing()) return null;
+            remapKey = key;
+            remapDownTime = e.getDownTime();
+            return null;
+        }
+        if (key != remapKey) return null;
+        if (remapFired) return Boolean.TRUE;
+        // Its repeats never reach the app (no "aaaa" in a launcher search), before the hold time or after.
+        if (e.getEventTime() - remapDownTime < remapHold) return Boolean.TRUE;
+        remapFired = true;
+        String action = remapMap.get(key);
+        if (action != null && KeyRemap.INSTANCE.run(this, action) && haptic) {
+            Vibrator v = getSystemService(Vibrator.class);
+            if (v != null && v.hasVibrator()) v.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK));
+        }
+        return Boolean.TRUE;
     }
 
     // HoldEngine.Output: runs before the triggering event's answer returns.

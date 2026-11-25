@@ -138,6 +138,20 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
                     complete(NativeResult.Failure(NativeErrorKind.UNEXPECTED, error.message ?: "Couldn't read the state", true))
                 }
             }
+            // The apps a hold can open: every launchable app, by label.
+            "apps" -> work.execute {
+                try {
+                    val pm = activity.packageManager
+                    val apps = pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0)
+                        .map { it.activityInfo.packageName to it.loadLabel(pm).toString() }
+                        .distinctBy { it.first }.sortedBy { it.second.lowercase() }
+                    val list = JSONArray()
+                    apps.forEach { (pkg, label) -> list.put(JSONObject().put("id", "app:$pkg").put("label", label)) }
+                    complete(NativeResult.Success(list.toString()))
+                } catch (error: Exception) {
+                    complete(NativeResult.Failure(NativeErrorKind.UNEXPECTED, error.message ?: "Couldn't list the apps", true))
+                }
+            }
             else -> try {
                 run(operation, data)
                 complete(NativeResult.Success("null"))
@@ -153,6 +167,10 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
             "lightPreview" -> LightService.instance?.preview(data.getInt("level"))
             "lightSlider" -> activity.startActivity(Intent(activity, com.everyonesniche.titantools.light.SliderActivity::class.java)
                 .putExtra(com.everyonesniche.titantools.light.SliderActivity.EXTRA_KIND, data.getString("kind")))
+            "remapSet" -> {
+                com.everyonesniche.titantools.hold.KeyRemap.set(activity, data.getInt("key"), data.getString("action"))
+                changed()
+            }
             "seenWhatsNew" -> {
                 com.everyonesniche.titantools.core.Updates.seenWhatsNew(activity)
                 changed()
@@ -214,6 +232,9 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
             Prefs.LIGHT_WHEN -> editor.putString(key, if (value == "typing") "typing" else "screen")
             Prefs.LIGHT_STAY_SECONDS -> editor.putInt(key, (value as Number).toInt().takeIf { it in Prefs.STAY_SECONDS } ?: Prefs.DEFAULT_STAY_SECONDS)
             Prefs.LIGHT_DARK_LUX -> editor.putFloat(key, (value as Number).toFloat().takeIf { it in Prefs.DARK_LUX_RANGE } ?: Prefs.DEFAULT_DARK_LUX)
+            com.everyonesniche.titantools.hold.KeyRemap.ON -> editor.putBoolean(key, value as Boolean)
+            com.everyonesniche.titantools.hold.KeyRemap.HOLD -> editor.putInt(key, (value as Number).toInt()
+                .takeIf { it in com.everyonesniche.titantools.hold.KeyRemap.HOLD_TIMES } ?: com.everyonesniche.titantools.hold.KeyRemap.DEFAULT_HOLD)
             Prefs.HOLD_MILLIS -> editor.putInt(key, (value as Number).toInt().takeIf { it in Prefs.HOLD_TIMES } ?: Prefs.DEFAULT_HOLD_MILLIS)
             Prefs.PHONE_DPI, Prefs.TABLET_DPI -> {
                 val dpi = (value as Number).toInt()
@@ -390,6 +411,15 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
                 .put("extraDim", prefs.getBoolean(Prefs.NIGHT_EXTRA_DIM, true)).put("dimLevel", NightMode.dimLevel(activity))
                 .put("darkTheme", prefs.getBoolean(Prefs.NIGHT_DARK_THEME, false)))
             .put("oldApps", old)
+            .put("remap", com.everyonesniche.titantools.hold.KeyRemap.let { remap ->
+                val keys = JSONObject()
+                remap.map(activity).forEach { (code, action) ->
+                    keys.put(('a' + (code - android.view.KeyEvent.KEYCODE_A)).toString(),
+                        JSONObject().put("id", action).put("label", remap.label(activity, action)))
+                }
+                JSONObject().put("on", remap.on(activity)).put("holdMillis", remap.holdMillis(activity)).put("keys", keys)
+                    .put("service", accessibility)
+            })
             .put("titanKeys", JSONObject().put("installed", Installed.has(activity, Installed.TITANKEYS))
                 .put("selected", HoldPause.pausedFor(defaultIme)))
     }

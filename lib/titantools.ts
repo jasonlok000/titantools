@@ -41,6 +41,8 @@ export type State = {
   titanKeys: { installed: boolean; selected: boolean };
   /** Update checks: on or off, a newer version found (or null), and the version code to show what's new for once (0 for none). */
   updates: { on: boolean; available: string | null; whatsNew: number };
+  /** Hold a letter for an action: on or off, the hold time, each mapped letter's action, and whether Accessibility is on. */
+  remap: { on: boolean; holdMillis: number; keys: Record<string, { id: string; label: string }>; service: boolean };
 };
 
 /** The settings the screens can change, by their native names (Prefs.kt). */
@@ -49,7 +51,7 @@ export type Setting =
   | "light_level" | "light_dark_lux" | "light_stay_seconds" | "light_preset" | "light_activity"
   | "light_dark_room" | "light_night_hours" | "light_dark_theme" | "light_any_time" | "light_night_from" | "light_night_to" | "light_night_typing"
   | "night_extra_dim" | "night_dim_level" | "night_dark_theme"
-  | "hold_millis" | "phone_dpi" | "tablet_dpi" | "updates_on";
+  | "hold_millis" | "phone_dpi" | "tablet_dpi" | "updates_on" | "remap_on" | "remap_hold_millis";
 
 /** The pages setup and the cards open. */
 export type Page =
@@ -74,6 +76,11 @@ export async function set(key: Setting, value: boolean | number | string) {
 export const open = (target: Page) => native("open", { target });
 /** The native pop-up with a slider: brightness, or the dark room level. */
 export const openSlider = (kind: "level" | "dark") => native("lightSlider", { kind });
+/** Sets letter [letter]'s hold action, or clears it with "". */
+export const setRemap = (letter: string, action: string) =>
+  then(native("remapSet", { key: 29 + letter.charCodeAt(0) - 97, action }));
+/** Every launchable app, for a hold to open. */
+export const listApps = async (): Promise<{ id: string; label: string }[]> => JSON.parse(await native("apps"));
 /** Opens the newer release's page. */
 export const openUpdate = () => native("openUpdate");
 /** What's new was read: it isn't shown again until the next update. */
