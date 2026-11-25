@@ -70,9 +70,9 @@ export default function Home() {
         : s.titanKeys.installed
         ? <>
           <Note>{s.titanKeys.selected
-            ? "TitanKeys is your keyboard. Type something with it and it links up, so the key light can come on only while you type, and hold-a-letter actions don't fire while you type."
-            : "TitanKeys isn't your keyboard. Switch to it and the key light can come on only while you type, and hold-a-letter actions don't fire while you type."}</Note>
-          <Field label="Open TitanKeys" onPress={() => void open("titanKeysApp")}>{""}</Field>
+            ? "Waiting for TitanKeys. Type something with TitanKeys and the two link up."
+            : "TitanKeys isn't your keyboard. Make it your keyboard in TitanKeys' setup, and the key light can come on only while you type, and hold-a-letter actions don't fire while you type."}</Note>
+          {!s.titanKeys.selected && <Field label="Open TitanKeys" onPress={() => void open("titanKeysApp")}>{""}</Field>}
         </>
         : <>
           <Note>TitanKeys isn't installed. A keyboard made for the Titan 2 Elite. With it, the key light can come on only while you type, and hold-a-letter actions don't fire while you type.</Note>
