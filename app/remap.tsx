@@ -11,7 +11,7 @@ export default function Remap() {
   const { remap } = result.data;
   const summary = (k: typeof remap.keys[number]) => k.hold?.label ?? "Nothing";
   return <Screen title="Keys for actions"
-    subtitle="Hold a letter to open an app or run an action. Only outside text boxes, and a quick press stays a quick press.">
+    subtitle="Hold a letter or Back to open an app or run an action. Only outside text boxes, and a quick press stays a quick press.">
     <Section title="Keys for actions">
       <Toggle label="Keys run their actions" value={remap.on} onChange={on => void set("remap_on", on)} />
       {!remap.service && <Field label="Turn on TitanTools in Accessibility" onPress={() => void open("accessibility")}>To do</Field>}
@@ -23,9 +23,9 @@ export default function Remap() {
     {remap.on && <Section title="Hold for">
       <SettingsChoices value={String(remap.holdMillis)} options={holdTimes.map(t => ({ value: String(t), label: `${t / 1000} seconds` }))}
         onChange={value => void set("remap_hold_millis", Number(value))} />
-      <Note>How long to hold a letter before its action runs.</Note>
+      <Note>How long to hold a key before its action runs.</Note>
     </Section>}
-    {remap.on && <Section title="Letters">
+    {remap.on && <Section title="Keys">
       {remap.keys.map(k => <Field key={k.code} label={k.name} href={`/remap/${k.code}`}>{summary(k)}</Field>)}
     </Section>}
   </Screen>;

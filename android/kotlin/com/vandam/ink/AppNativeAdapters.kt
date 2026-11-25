@@ -434,7 +434,7 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
             .put("remap", com.everyonesniche.titantools.hold.KeyRemap.let { remap ->
                 val holds = remap.map(activity)
                 val keys = JSONArray()
-                remap.LETTERS.forEach { code ->
+                remap.KEYS.forEach { code ->
                     keys.put(JSONObject().put("code", code).put("name", remap.name(code))
                         .put("hold", holds[code]?.let { JSONObject().put("id", it).put("label", remap.label(activity, it)) } ?: JSONObject.NULL))
                 }

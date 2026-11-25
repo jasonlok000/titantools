@@ -24,6 +24,12 @@ object KeyRemap {
     const val DEFAULT_HOLD = 500
 
     val LETTERS = (KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z).toList()
+    /**
+     * Back is the one special key (owner, 2026-11-24): hold only, and its press is never held back, even with Shizuku, so a
+     * plain Back always reaches TitanKeys and the app as it is.
+     */
+    const val BACK = KeyEvent.KEYCODE_BACK
+    val KEYS = LETTERS + BACK
 
     val GLOBALS = linkedMapOf(
         "home" to ("Home" to AccessibilityService.GLOBAL_ACTION_HOME),
@@ -39,17 +45,17 @@ object KeyRemap {
 
     fun holdMillis(context: Context): Int = Prefs.of(context).getInt(HOLD, DEFAULT_HOLD).takeIf { it in HOLD_TIMES } ?: DEFAULT_HOLD
 
-    /** The letters' actions. Anything saved for another key by builds 29–40 is left out. */
+    /** The keys' actions. Anything saved for another key by builds 29–40 is left out. */
     fun map(context: Context): Map<Int, String> {
         val json = try { JSONObject(Prefs.of(context).getString(MAP, null) ?: "{}") } catch (error: Exception) { JSONObject() }
-        return json.keys().asSequence().mapNotNull { k -> k.toIntOrNull()?.takeIf { it in LETTERS }?.let { it to json.getString(k) } }.toMap()
+        return json.keys().asSequence().mapNotNull { k -> k.toIntOrNull()?.takeIf { it in KEYS }?.let { it to json.getString(k) } }.toMap()
     }
 
-    fun name(keyCode: Int): String = ('A' + (keyCode - KeyEvent.KEYCODE_A)).toString()
+    fun name(keyCode: Int): String = if (keyCode == BACK) "Back" else ('A' + (keyCode - KeyEvent.KEYCODE_A)).toString()
 
-    /** Sets or clears ([action] empty) letter [keyCode]'s hold action. */
+    /** Sets or clears ([action] empty) [keyCode]'s hold action. */
     fun set(context: Context, keyCode: Int, action: String) {
-        require(keyCode in LETTERS) { "Only letter keys" }
+        require(keyCode in KEYS) { "Only letter keys and Back" }
         require(action.isEmpty() || valid(action)) { "Unknown action" }
         val next = map(context).toMutableMap()
         if (action.isEmpty()) next.remove(keyCode) else next[keyCode] = action

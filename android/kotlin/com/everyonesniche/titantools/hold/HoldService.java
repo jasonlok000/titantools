@@ -241,7 +241,7 @@ public final class HoldService extends AccessibilityService
         com.everyonesniche.titantools.light.LightRule.Link link = com.everyonesniche.titantools.core.Link.INSTANCE.current(this);
         long now = System.currentTimeMillis();
         String typed = link.getTypedAt() > 0 ? ((now - link.getTypedAt()) / 1000.0) + "s" : "never";
-        return "key=letter"
+        return "key=" + (key == KeyRemap.BACK ? "Back" : "letter")
                 + " field=" + new String[]{"none", "text", "number", "phone", "date"}[Math.min(4, lastInputType & InputType.TYPE_MASK_CLASS)] + " inputType=0x" + Integer.toHexString(lastInputType)
                 + " started=" + (input != null && input.getCurrentInputStarted())
                 + " titanKeysTyped=" + typed + " home=" + link.getOnHome() + (link.getTypedAt() == link.getLastAt() ? "" : " (last was a field opening)")
@@ -297,7 +297,8 @@ public final class HoldService extends AccessibilityService
             remapDownTime = e.getDownTime();
             main.removeCallbacks(holdDue);
             main.postAtTime(holdDue, remapDownTime + remapHold);
-            if (KeyInjector.INSTANCE.ready()) {
+            // Back always goes straight through: never held back, so a plain Back is exactly as it was.
+            if (key != KeyRemap.BACK && KeyInjector.INSTANCE.ready()) {
                 remapSwallowed = true;
                 log("key held back", facts(key, e));
                 return Boolean.TRUE;

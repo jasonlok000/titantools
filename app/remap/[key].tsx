@@ -21,7 +21,7 @@ const actions = [
   { value: "global:screenshot", label: "Screenshot" },
 ];
 
-/** One letter's hold action: an action, or an app to open. */
+/** One key's hold action (a letter or Back): an action, or an app to open. */
 export default function RemapKey() {
   const { key } = useRouteParams("/remap/[key]");
   const code = Number(key);
@@ -29,7 +29,7 @@ export default function RemapKey() {
   const [apps, setApps] = useState<{ id: string; label: string }[]>([]);
   useEffect(() => void listApps().then(setApps), []);
   const k = result.status === "ready" ? result.data.remap.keys.find(x => x.code === code) : undefined;
-  if (result.status !== "ready" || !k) return <Screen title="Letter" />;
+  if (result.status !== "ready" || !k) return <Screen title="Key" />;
   const current = k.hold?.id ?? "";
   // Widget slots show their app: "Widget 1 – 1Valet".
   const widgets = [1, 2, 3, 4, 5].map(n => {
@@ -39,6 +39,9 @@ export default function RemapKey() {
   const options = [...actions.slice(0, 7), ...widgets, ...actions.slice(7)];
   const pick = (action: string) => void setRemap(code, action).then(() => back());
   return <Screen title={`Hold ${k.name}`} subtitle={k.hold?.label ?? "Nothing yet"}>
+    {k.code === 4 && <Section title="Back">
+      <Note>A quick press of Back always goes back as usual. Only holding it runs the action, and then that hold doesn't go back.</Note>
+    </Section>}
     <Section title="Action">
       <SettingsChoices value={current} options={options} onChange={pick} />
       <Note>TitanTools can't switch Wi-Fi, Bluetooth or mobile data directly, so this opens Quick settings instead.</Note>
