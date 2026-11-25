@@ -56,6 +56,20 @@ public final class HoldService extends AccessibilityService
     private int lastInputType;
     /** A held-back click, sent once no second press came for a double press. */
     private final Runnable sendClick = this::flushClick;
+    /**
+     * The hold's own timer, from the press's time: a held-back key gets no repeats (they follow the press the app never saw),
+     * so the hold can't wait for them.
+     */
+    private final Runnable holdDue = this::holdDue;
+
+    private void holdDue() {
+        if (remapKey == -1 || remapFired) return;
+        String hold = remapMap.get(remapKey);
+        if (hold == null) return;
+        remapFired = true;
+        log("key action fired", "hold timer, " + (SystemClock.uptimeMillis() - remapDownTime) + "ms");
+        fire(hold);
+    }
 
     private final BroadcastReceiver screens = new BroadcastReceiver() {
         @Override public void onReceive(Context c, Intent i) {
@@ -288,6 +302,8 @@ public final class HoldService extends AccessibilityService
         }
         if (!down) {
             if (key != remapKey) return null;
+            if (!remapFired && main.hasCallbacks(holdDue)) log("key hold timer cancelled", "released before " + remapHold + "ms");
+            main.removeCallbacks(holdDue);
             boolean fired = remapFired, swallowed = remapSwallowed;
             remapKey = -1;
             remapFired = false;
@@ -335,6 +351,8 @@ public final class HoldService extends AccessibilityService
             }
             remapKey = key;
             remapDownTime = e.getDownTime();
+            main.removeCallbacks(holdDue);
+            if (hold != null) main.postAtTime(holdDue, remapDownTime + remapHold);
             if (KeyInjector.INSTANCE.ready()) {
                 remapSwallowed = true;
                 log("key held back", facts(key, e));
