@@ -1,7 +1,7 @@
 name = "Titan Tools"
 package = "com.everyonesniche.titantools"
 version = "1.1.1"
-version_code = 37
+version_code = 38
 
 [signing]
 keystore = "signing/nightkeys-release.p12"

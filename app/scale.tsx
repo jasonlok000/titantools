@@ -1,18 +1,34 @@
-import { Field, Screen, Section, SettingsChoices, useSnapshot } from "ink";
+import { useEffect, useState } from "react";
+import { Field, Screen, Section, TextInput, useSnapshot } from "ink";
 import { open, set, state } from "../lib/titantools";
 import { Note } from "../lib/note";
 
-const phone = [
-  { value: "0", label: "300 DPI (standard)" },
-  { value: "320", label: "320 DPI" },
-  { value: "344", label: "344 DPI (bigger)" },
-];
+/** The sizes the phone uses by itself (ScaleMath), and the range Titan Tools accepts (ScaleSettings). */
+const PHONE_DEFAULT = 300;
+const TABLET_DEFAULT = 286;
+const MIN = 200;
+const MAX = 480;
 
-const tablet = [
-  { value: "0", label: "286 DPI (standard)" },
-  { value: "270", label: "270 DPI" },
-  { value: "250", label: "250 DPI (smaller)" },
-];
+/** One mode's size: a number to type, saved with a button; empty means the phone's own size. */
+function SizeInput({ title, setting, saved, fallback }: { title: string; setting: "phone_dpi" | "tablet_dpi"; saved: number; fallback: number }) {
+  const [text, setText] = useState("");
+  const [problem, setProblem] = useState<string | null>(null);
+  useEffect(() => setText(saved ? String(saved) : ""), [saved]);
+  const typed = text.trim() === "" ? 0 : Number(text.trim());
+  const valid = text.trim() === "" || (Number.isInteger(typed) && typed >= MIN && typed <= MAX);
+  const changed = typed !== saved;
+  const save = () => {
+    setProblem(null);
+    set(setting, typed).catch((error: unknown) => setProblem(error instanceof Error ? error.message : String(error)));
+  };
+  return <Section title={title}>
+    <TextInput label="DPI" value={text} onChange={value => { setText(value); setProblem(null); }} placeholder={String(fallback)} />
+    {!valid && <Note>{`Enter a whole number from ${MIN} to ${MAX}, or leave it empty for ${fallback}.`}</Note>}
+    {valid && changed && <Field label={`Save ${typed || fallback} DPI`} onPress={save}>{""}</Field>}
+    {problem && <Note>{problem}</Note>}
+    <Note>{`Now ${saved || fallback} DPI. Leave it empty for the standard ${fallback}. Lower numbers fit more on the screen.`}</Note>
+  </Section>;
+}
 
 export default function Scale() {
   const result = useSnapshot(state);
@@ -24,12 +40,8 @@ export default function Scale() {
       <Field label="Open Shortcut keys" onPress={() => void open("shortcutKeys")}>{""}</Field>
       {scale.on && <Field label="Switch now" onPress={() => void open("scaleNow")}>{""}</Field>}
     </Section>
-    <Section title="Phone mode">
-      <SettingsChoices value={String(scale.phoneDpi)} options={phone} onChange={value => void set("phone_dpi", Number(value))} />
-    </Section>
-    <Section title="Tablet mode">
-      <SettingsChoices value={String(scale.tabletDpi)} options={tablet} onChange={value => void set("tablet_dpi", Number(value))} />
-      <Note>Sizes take effect on the next switch.</Note>
-    </Section>
+    <SizeInput title="Phone mode" setting="phone_dpi" saved={scale.phoneDpi} fallback={PHONE_DEFAULT} />
+    <SizeInput title="Tablet mode" setting="tablet_dpi" saved={scale.tabletDpi} fallback={TABLET_DEFAULT} />
+    <Note>{`The phone's own size is ${PHONE_DEFAULT} DPI. Tablet mode must be lower than phone mode. Sizes take effect on the next switch.`}</Note>
   </Screen>;
 }

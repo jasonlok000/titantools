@@ -195,6 +195,8 @@ private fun reused() {
     check("tablet mode goes to phone", ScaleMath.next(0, ScaleMath.widthDp(1076, 1200, 286), 286, defaults) == ScaleMath.LARGE)
     check("tablet is 286 DPI", ScaleMath.density(1076, 1200, ScaleMath.COMPACT, defaults) == 286)
     check("phone is 300 DPI", ScaleMath.density(1076, 1200, ScaleMath.LARGE, defaults) == 300)
+    check("typed sizes outside 200-480 are refused", ScaleSettings.problem(500, 0) != null && ScaleSettings.problem(0, 150) != null)
+    check("tablet must be lower than phone", ScaleSettings.problem(0, 300) != null && ScaleSettings.problem(320, 280) == null)
     check("every offered size pair is valid", listOf(0, 320, 344).all { p -> listOf(0, 270, 250).all { t -> ScaleSettings.problem(p, t) == null } })
     check("wm density override", WmOutput.density("Physical density: 400\nOverride density: 286\n") == 286)
     check("wm size", WmOutput.size("Physical size: 1076x1200\n").contentEquals(intArrayOf(1076, 1200)))

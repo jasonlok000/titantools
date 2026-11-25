@@ -5,8 +5,8 @@ public final class ScaleSettings {
     public static final String PREFS = "scale_settings";
     public static final String PHONE_DPI = "phone_dpi";
     public static final String TABLET_DPI = "tablet_dpi";
-    public static final int MIN_DPI = 120;
-    public static final int MAX_DPI = 640;
+    public static final int MIN_DPI = 200;
+    public static final int MAX_DPI = 480;
     /** Many apps switch to their tablet layout at this smallest width. */
     public static final int TABLET_LAYOUT_DP = 600;
     private ScaleSettings() {}
