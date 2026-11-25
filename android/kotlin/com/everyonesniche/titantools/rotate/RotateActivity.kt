@@ -18,9 +18,14 @@ class RotateActivity : Activity() {
             return
         }
         Rotation.flip(this) { message ->
-            com.everyonesniche.titantools.core.Feedback.say(this, message)
+            // After the screen has turned: a toast shown while it turns is dropped.
+            com.everyonesniche.titantools.core.Feedback.say(this, message, ROTATE_SETTLE_MILLIS)
             close()
         }
+    }
+
+    private companion object {
+        const val ROTATE_SETTLE_MILLIS = 700L
     }
 
     private fun close() {

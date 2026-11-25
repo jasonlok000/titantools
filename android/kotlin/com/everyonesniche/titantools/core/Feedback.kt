@@ -23,14 +23,15 @@ object Feedback {
         else -> null
     }
 
-    fun say(context: Context, message: String?) {
+    /** [delayMillis]: wait first, as after a rotation, whose turn would swallow a toast shown during it. */
+    fun say(context: Context, message: String?, delayMillis: Long = 0) {
         if (message.isNullOrBlank()) return
         val app = context.applicationContext
-        main.post {
+        main.postDelayed({
             Toast.makeText(app, message, Toast.LENGTH_SHORT).show()
             // A failure or a hint ("Couldn't …", "Turn it on …") gets no vibration: only things that happened do.
-            if (message.startsWith("Couldn't") || message.contains("Turn it on") || message.contains("first") || message.startsWith("Can't")) return@post
+            if (message.startsWith("Couldn't") || message.contains("Turn it on") || message.contains("first") || message.startsWith("Can't")) return@postDelayed
             Haptic.play(app, when (state(message)) { true -> Haptic.CONFIRM; false -> TICK; null -> BOUNDARY })
-        }
+        }, delayMillis)
     }
 }
