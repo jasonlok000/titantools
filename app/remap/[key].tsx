@@ -19,6 +19,7 @@ const actions = [
   { value: "global:quick", label: "Quick settings (Wi-Fi, Bluetooth, data)" },
   { value: "global:lock", label: "Lock screen" },
   { value: "global:screenshot", label: "Screenshot" },
+  { value: "phone:mini", label: "Mini mode" },
 ];
 
 /** One key's actions: what holding it does, and what pressing it twice does. */

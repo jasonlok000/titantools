@@ -46,6 +46,15 @@ object KeyRemap {
         "screenshot" to ("Screenshot" to AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT),
     )
 
+    /**
+     * The phone's own shortcut functions (com.agui.shortcutsettings' ShortcutFunctionReceiver, exported without a permission):
+     * a broadcast of com.agui.action.SHORTCUT_FUNCTION with "shortcut_function" set to the function's name. Read from the
+     * phone's app on 2026-11-24: Shortcut_function11 toggles Mini mode (agui_mini_mode_enable).
+     */
+    val PHONE = linkedMapOf("mini" to ("Mini mode" to "Shortcut_function11"))
+    private const val PHONE_PACKAGE = "com.agui.shortcutsettings"
+    private const val PHONE_ACTION = "com.agui.action.SHORTCUT_FUNCTION"
+
     fun on(context: Context): Boolean = Prefs.of(context).getBoolean(ON, false)
 
     fun holdMillis(context: Context): Int = Prefs.of(context).getInt(HOLD, DEFAULT_HOLD).takeIf { it in HOLD_TIMES } ?: DEFAULT_HOLD
@@ -105,6 +114,7 @@ object KeyRemap {
         action.startsWith("do:") -> action.removePrefix("do:") in TriggerActivity.ACTIONS
         action.startsWith("widget:") -> action.removePrefix("widget:").toIntOrNull() in 1..5
         action.startsWith("global:") -> action.removePrefix("global:") in GLOBALS
+        action.startsWith("phone:") -> action.removePrefix("phone:") in PHONE
         else -> false
     }
 
@@ -120,6 +130,7 @@ object KeyRemap {
             if (app.isNullOrBlank()) "Widget $slot" else "Widget $slot – $app"
         }
         action.startsWith("global:") -> GLOBALS[action.removePrefix("global:")]?.first ?: action
+        action.startsWith("phone:") -> PHONE[action.removePrefix("phone:")]?.first ?: action
         else -> action
     }
 
@@ -134,6 +145,10 @@ object KeyRemap {
                 .putExtra(TriggerActivity.EXTRA_SLOT, action.removePrefix("widget:").toInt()))
                 ?.let { service.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); true } ?: false
             action.startsWith("global:") -> GLOBALS[action.removePrefix("global:")]?.let { service.performGlobalAction(it.second) } ?: false
+            action.startsWith("phone:") -> PHONE[action.removePrefix("phone:")]?.let {
+                service.sendBroadcast(Intent(PHONE_ACTION).setPackage(PHONE_PACKAGE).putExtra("shortcut_function", it.second))
+                true
+            } ?: false
             else -> false
         }
     } catch (error: Exception) {
