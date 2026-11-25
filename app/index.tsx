@@ -15,9 +15,9 @@ export default function Home() {
   const shortcuts = shortcutsOn(s);
   const news = s.updates.whatsNew ? whatsNew(s.updates.whatsNew) : [];
   return <Screen title="Titan Tools" subtitle="Small tools for the Titan 2 Elite. Turn on the ones you want.">
-    {s.updates.available && <Section title="Update">
-      <Field label={`Titan Tools ${s.updates.available} is out`} onPress={() => void openUpdate()}>Open</Field>
-      <Note>Opens the release page, where you can download it.</Note>
+    {s.updates.available && <Section title="Update available">
+      <Field label={`Titan Tools ${s.updates.available} is out`} onPress={() => void openUpdate()}>Get it</Field>
+      <Note>Titan Tools doesn't update by itself. Get it opens the release page; download and install it there.</Note>
     </Section>}
     {news.length > 0 && <Section title={`New in Titan Tools ${s.version}`}>
       {news.map(line => <Note key={line}>{line}</Note>)}
@@ -68,7 +68,7 @@ export default function Home() {
         </>}
     </Section>
     <Section title="Updates">
-      <Toggle label="Check for updates" subtitle="Every few hours, and when you open Titan Tools. A notification when a new version is out."
+      <Toggle label="Check for updates" subtitle="Every 3 hours, and when you open Titan Tools. A notification once a day while a new version is out."
         value={s.updates.on} onChange={on => void set("updates_on", on)} />
     </Section>
     <Note align="center">{`Titan Tools ${s.version}`}</Note>

@@ -72,8 +72,8 @@ export async function set(key: Setting, value: boolean | number | string) {
 }
 
 export const open = (target: Page) => native("open", { target });
-/** Lights the keys at [level] for a moment, whatever the rules say, then they go back to what the rules say. */
-export const previewLevel = (level: number) => native("lightPreview", { level });
+/** The native pop-up with a slider: brightness, or the dark room level. */
+export const openSlider = (kind: "level" | "dark") => native("lightSlider", { kind });
 /** Opens the newer release's page. */
 export const openUpdate = () => native("openUpdate");
 /** What's new was read: it isn't shown again until the next update. */
@@ -94,13 +94,11 @@ export const presetName = (preset: LightPreset) => presetNames[preset];
 
 /** Brightness in percent of the firmware's 255; the keys stay dark below level 11 (4%). */
 export const levelPercent = (level: number) => Math.round(level / 2.55);
-export const percentLevel = (percent: number) => Math.min(255, Math.max(11, Math.round(percent * 2.55)));
 
 /** The dark-room threshold in percent of a log scale from 0.5 to 200 lux, so the dim end has room. */
 const LUX_MIN = 0.5;
 const LUX_SPAN = Math.log(200 / LUX_MIN);
 export const luxPercent = (lux: number) => Math.min(100, Math.max(0, Math.round(Math.log(Math.max(lux, LUX_MIN) / LUX_MIN) / LUX_SPAN * 100)));
-export const percentLux = (percent: number) => Math.round(LUX_MIN * Math.exp(percent / 100 * LUX_SPAN) * 10) / 10;
 
 /** A time of day from minutes after midnight, as 20:00. */
 export const clock = (minutes: number) =>

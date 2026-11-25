@@ -19,20 +19,24 @@ import java.net.URL
 import java.util.concurrent.Executors
 
 /**
- * Update notices: Titan Tools looks for a newer release itself, on every app open (at most every 10 minutes) and every 6 hours
- * in the background, and posts one notification per new version that opens its release page. The Updates switch turns the
+ * Update notices, in your face because Titan Tools never updates by itself: it looks for a newer release on every app open (at
+ * most every 10 minutes) and every 3 hours in the background. While one is out, a silent heads-up notification opening its
+ * release page comes back once a day until you update, and the home screen shows a banner. The Updates switch turns the
  * checks off. After an update, the home screen shows what's new once.
  *
- * The feed is [FEED_URL]: GitHub's latest release ({"tag_name": "v1.2.0", "html_url": …}) or a version file on the website
- * ({"version": "1.2.0", "versionCode": 25, "url": …}). While the repo is private GitHub answers 404 and nothing is shown.
+ * The feed is [FEED_URL]: GitHub's newest release, pre-releases included ([{"tag_name": "v1.2.0", "html_url": â€¦}) or a version file on the website
+ * ({"version": "1.2.0", "versionCode": 25, "url": â€¦}). While the repo is private GitHub answers 404 and nothing is shown.
  */
 object Updates {
     /** The one place to change where Titan Tools looks for updates. */
-    const val FEED_URL = "https://api.github.com/repos/jasonlok000/titantools/releases/latest"
-    private const val CHANNEL = "updates"
+    const val FEED_URL = "https://api.github.com/repos/jasonlok000/titantools/releases?per_page=1"
+    /** Heads-up but silent. A new id, as a channel's importance can't be raised once made (the first "updates" was default). */
+    private const val CHANNEL = "updates_heads_up"
+    private const val REPEAT_MILLIS = 24 * 60 * 60_000L
     private const val NOTIFICATION = 21
-    private const val JOB = 2101
-    private const val PERIOD_MILLIS = 6 * 60 * 60_000L
+    private const val JOB = 2102
+    private const val OLD_JOB = 2101
+    private const val PERIOD_MILLIS = 3 * 60 * 60_000L
     private const val OPEN_GAP_MILLIS = 10 * 60_000L
     private const val TAG = "TitanTools"
     private val work = Executors.newSingleThreadExecutor { r -> Thread(r, "titantools-updates").apply { isDaemon = true } }
@@ -74,7 +78,9 @@ object Updates {
 
     /** Parses either feed shape; null when it isn't one. */
     fun parse(body: String): Release? {
-        val json = JSONObject(body)
+        // GitHub's release list, newest first (pre-releases included, which releases/latest leaves out), or one object.
+        val text = body.trim()
+        val json = if (text.startsWith("[")) org.json.JSONArray(text).optJSONObject(0) ?: return null else JSONObject(text)
         val version = json.optString("tag_name").ifEmpty { json.optString("version") }.removePrefix("v")
         val url = json.optString("html_url").ifEmpty { json.optString("url") }
         if (version.isEmpty() || !url.startsWith("https://")) return null
@@ -121,16 +127,19 @@ object Updates {
         }
         val release = available(context) ?: return
         val key = "${release.version}/${release.code}"
-        if (p.getString("notified", null) == key) return
+        if (p.getString("notified", null) == key && System.currentTimeMillis() - p.getLong("notified_at", 0) < REPEAT_MILLIS) return
         notify(context, release)
-        p.edit().putString("notified", key).apply()
+        p.edit().putString("notified", key).putLong("notified_at", System.currentTimeMillis()).apply()
         Status.changed()
     }
 
     private fun notify(context: Context, release: Release) {
         val manager = context.getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(NotificationChannel(CHANNEL, "Updates", NotificationManager.IMPORTANCE_DEFAULT).apply {
-            description = "A new version of Titan Tools is out."
+        manager.deleteNotificationChannel("updates")
+        manager.createNotificationChannel(NotificationChannel(CHANNEL, "Updates", NotificationManager.IMPORTANCE_HIGH).apply {
+            description = "A new version of Titan Tools is out. Shown once a day until you update."
+            setSound(null, null)
+            enableVibration(false)
         })
         val open = PendingIntent.getActivity(context, 0, Intent(Intent.ACTION_VIEW, Uri.parse(release.url)),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
@@ -147,7 +156,7 @@ object Updates {
         }
     }
 
-    /** Every 6 hours with any network while checks are on; none while they're off. */
+    /** Every 3 hours with any network while checks are on; none while they're off. */
     fun schedule(context: Context) {
         // Never worth a crash: at worst, checks only run when the app is opened.
         try { scheduleNow(context) } catch (error: Exception) { Log.w(TAG, "Couldn't schedule update checks", error) }
@@ -155,6 +164,7 @@ object Updates {
 
     private fun scheduleNow(context: Context) {
         val jobs = context.getSystemService(JobScheduler::class.java) ?: return
+        jobs.cancel(OLD_JOB)
         if (!on(context)) {
             jobs.cancel(JOB)
             return

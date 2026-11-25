@@ -151,6 +151,8 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
         when (operation) {
             "set" -> set(data.getString("key"), data.get("value"))
             "lightPreview" -> LightService.instance?.preview(data.getInt("level"))
+            "lightSlider" -> activity.startActivity(Intent(activity, com.everyonesniche.titantools.light.SliderActivity::class.java)
+                .putExtra(com.everyonesniche.titantools.light.SliderActivity.EXTRA_KIND, data.getString("kind")))
             "seenWhatsNew" -> {
                 com.everyonesniche.titantools.core.Updates.seenWhatsNew(activity)
                 changed()

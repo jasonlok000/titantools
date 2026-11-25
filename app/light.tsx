@@ -1,6 +1,5 @@
-import { Screen, Section, SettingsChoices, Text, Toggle, useSnapshot } from "ink";
-import { clock, previewLevel, levelPercent, luxPercent, percentLevel, percentLux, presetName, set, state, type LightActivity, type LightPreset } from "../lib/titantools";
-import { Slider } from "../lib/slider";
+import { Field, Screen, Section, SettingsChoices, Toggle, useSnapshot } from "ink";
+import { clock, levelPercent, luxPercent, openSlider, presetName, set, state, type LightActivity, type LightPreset } from "../lib/titantools";
 import { DescribedChoices } from "../lib/choices";
 import { Note } from "../lib/note";
 
@@ -58,27 +57,12 @@ export default function Light() {
       <Note>How long the keys stay lit after you stop typing or close the text box.</Note>
       {light.activity === "typing" && light.keyPresses && <Note>No 0 with key presses: they keep the light on at least a second.</Note>}
     </Section>}
-    {light.preset !== "phone" && <Section title="Brightness">
-      <Text size={28}>{`${levelPercent(light.level)}%`}</Text>
-      <Slider min={4} max={100} value={levelPercent(light.level)}
-        onPick={percent => {
-          const level = percentLevel(percent);
-          void previewLevel(level);
-          if (level !== light.level) void set("light_level", level);
-        }} />
-      <Note>How bright the keys are when lit: 100% is the brightest the keyboard goes. While you move the bar, the keys light at that level so you can see it.</Note>
-    </Section>}
-    {light.preset !== "phone" && light.darkRoom && <Section title="Dark room below">
-      <Text size={28}>{`${luxPercent(light.darkLux)}%`}</Text>
-      <Slider min={0} max={100} value={luxPercent(light.darkLux)}
-        marker={light.roomLux == null ? null : luxPercent(light.roomLux)}
-        onPick={percent => {
-          const lux = percentLux(percent);
-          if (lux !== light.darkLux) void set("light_dark_lux", lux);
-        }} />
-      <Note>How dark the room must be: the keys count it as dark below this. Lower means darker. Tap or slide along the bar.</Note>
-      <Note>{light.roomLux == null ? "Your room now: shown while the light is on and the screen is on."
-        : `Your room now (blue line): ${luxPercent(light.roomLux)}%, ${light.roomLux < light.darkLux ? "dark" : "bright"}. Set the bar just above it to light the keys here.`}</Note>
+    {light.preset !== "phone" && <Section title="Brightness and darkness">
+      <Field label="Brightness" onPress={() => void openSlider("level")}>{`${levelPercent(light.level)}%`}</Field>
+      <Note>How bright the keys are when lit. Tap to slide it; the keys light so you can see it.</Note>
+      {light.darkRoom && <Field label="Dark room below" onPress={() => void openSlider("dark")}>{`${luxPercent(light.darkLux)}%`}</Field>}
+      {light.darkRoom && <Note>{light.roomLux == null ? "How dark the room must be: the keys count it as dark below this."
+        : `How dark the room must be: the keys count it as dark below this. Your room now: ${luxPercent(light.roomLux)}%.`}</Note>}
     </Section>}
     {custom && light.nightHours && <Section title="Night from">
       <SettingsChoices value={String(light.nightFrom)} options={halfHours.map(m => ({ value: String(m), label: clock(m) }))}

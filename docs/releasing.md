@@ -1,6 +1,6 @@
 # Releasing Titan Tools
 
-The GitHub repo `jasonlok000/titantools` is **private**. Keep it private; releases are only visible to people with access.
+The GitHub repo `jasonlok000/titantools` is **public** (owner, 2026-11-24). Releases stay `--prerelease` until the owner says otherwise. Titan Tools checks the newest release, pre-releases included (`https://api.github.com/repos/jasonlok000/titantools/releases?per_page=1`) for update notices (core/Updates.kt, `FEED_URL`), so raise `versionName` for each release: notices compare it, not the version code.
 
 ## Build
 
