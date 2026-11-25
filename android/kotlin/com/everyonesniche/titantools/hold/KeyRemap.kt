@@ -33,10 +33,10 @@ object KeyRemap {
     const val DOUBLE_MILLIS = 300L
 
     /**
-     * The side key: scancode 249 on mtk-pmic-keys, "key 249 FUNC1" in the phone's Generic.kl, a vendor key code looked up at
-     * run time (0 where the phone has none).
+     * The side key: scancode 249 on mtk-pmic-keys, "key 249 FUNC1" in the phone's Generic.kl. The framework has no name for
+     * it, so keyCodeFromString finds nothing; Titan Tools' key filter sees it as key code 401 (light log, 2026-11-24).
      */
-    val FUNC1: Int = KeyEvent.keyCodeFromString("KEYCODE_FUNC1")
+    val FUNC1: Int = KeyEvent.keyCodeFromString("KEYCODE_FUNC1").takeIf { it > 0 } ?: 401
 
     /** The keys offered without adding them: the letters, then the side key (Func1), Back, Sym and fn. */
     val SPECIALS = listOfNotNull(FUNC1.takeIf { it > 0 }, KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_SYM, KeyEvent.KEYCODE_FUNCTION)

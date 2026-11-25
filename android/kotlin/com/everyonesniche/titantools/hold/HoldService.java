@@ -53,6 +53,7 @@ public final class HoldService extends AccessibilityService
     private int remapHold = KeyRemap.DEFAULT_HOLD, remapKey = -1, lastUpKey = -1, pendingClick = -1, learnUp = -1;
     private long remapDownTime, lastUpAt, learnUntil;
     private final java.util.Set<Integer> loggedCodes = new java.util.HashSet<>();
+    private int lastInputType;
     /** A held-back click, sent once no second press came for a double press. */
     private final Runnable sendClick = this::flushClick;
 
@@ -120,6 +121,7 @@ public final class HoldService extends AccessibilityService
             @Override public void onStartInput(EditorInfo info, boolean restarting) {
                 if (!restarting) engine.resolve(SystemClock.uptimeMillis());
                 refreshScreenState();
+                lastInputType = info.inputType;
                 int kind = info.inputType & InputType.TYPE_MASK_CLASS;
                 int variation = info.inputType & InputType.TYPE_MASK_VARIATION;
                 editorActive = kind == InputType.TYPE_CLASS_TEXT;
@@ -220,10 +222,26 @@ public final class HoldService extends AccessibilityService
 
     /** You're typing: a text field has the focus, or TitanKeys said it's typing in the last 3 seconds. Then holds stay TitanKeys'. */
     private boolean typing() {
-        if (editorActive && input != null && input.getCurrentInputStarted()) return true;
+        // A text field is connected: input started for a text class field (TYPE_NULL and fallback connections don't count).
+        // TitanKeys' TYPING messages aren't used: TitanKeys sends one for every key it gets, including the clicks Titan Tools
+        // lets through or sends again, so they made holds stand down in apps with no field at all.
+        return editorActive && lastInputType != InputType.TYPE_NULL && input != null && input.getCurrentInputStarted();
+    }
+
+    /** The facts behind a key action decision, for the log. Never which letter. */
+    private String facts(int key, KeyEvent e) {
         com.everyonesniche.titantools.light.LightRule.Link link = com.everyonesniche.titantools.core.Link.INSTANCE.current(this);
-        long age = System.currentTimeMillis() - link.getLastAt();
-        return link.getTyping() && age >= 0 && age < 3000;
+        long now = System.currentTimeMillis();
+        String typed = link.getTypedAt() > 0 ? ((now - link.getTypedAt()) / 1000.0) + "s" : "never";
+        return "key=" + (e.isPrintingKey() ? "letter" : KeyEvent.keyCodeToString(key))
+                + " field=" + (editorActive ? "text" : "none") + " inputType=0x" + Integer.toHexString(lastInputType)
+                + " started=" + (input != null && input.getCurrentInputStarted())
+                + " titanKeysTyped=" + typed + (link.getTypedAt() == link.getLastAt() ? "" : " (last was a field opening)")
+                + " shizuku=" + KeyInjector.INSTANCE.ready() + " screen=" + screenUsable + " hold=" + remapHold + "ms";
+    }
+
+    private static void log(String event, String details) {
+        com.everyonesniche.titantools.light.LightLog.INSTANCE.write(event, details);
     }
 
     /** The next key pressed in the next 10 seconds is added to the screen's list, and goes nowhere else. */
@@ -239,7 +257,9 @@ public final class HoldService extends AccessibilityService
     }
 
     private void fire(String action) {
-        if (action != null && KeyRemap.INSTANCE.run(this, action) && haptic) Haptic.INSTANCE.play(this, Haptic.INSTANCE.getCONFIRM());
+        boolean ran = action != null && KeyRemap.INSTANCE.run(this, action);
+        if (!ran) log("key action failed", "the action didn't run");
+        if (ran && haptic) Haptic.INSTANCE.play(this, Haptic.INSTANCE.getCONFIRM());
     }
 
     /**
@@ -278,8 +298,10 @@ public final class HoldService extends AccessibilityService
             if (hasDouble) {
                 pendingClick = key;
                 main.postDelayed(sendClick, KeyRemap.DOUBLE_MILLIS);
+                log("key click waits for a second press", "");
             } else {
-                KeyInjector.INSTANCE.press(key, 0);
+                boolean sent = KeyInjector.INSTANCE.press(key, 0);
+                log("key click sent again", sent ? "ok" : "FAILED");
             }
             return Boolean.TRUE;
         }
@@ -295,19 +317,28 @@ public final class HoldService extends AccessibilityService
                 lastUpKey = -1;
                 remapKey = key;
                 remapFired = true;
+                log("key action fired", "pressed twice: " + facts(key, e));
                 fire(twice);
                 return Boolean.TRUE;
             }
             // Any other press: a waiting click goes first, so keys stay in order.
             if (pendingClick != -1) flushClick();
             lastUpKey = -1;
-            if (!remapOn || (hold == null && twice == null) || (modified(e) && !modifierKey(key)) || !screenUsable || typing()) return null;
+            if (!remapOn || (hold == null && twice == null)) return null;
+            String why = (modified(e) && !modifierKey(key)) ? "a modifier is down" : !screenUsable ? "screen off or locked"
+                    : typing() ? "a text field is connected" : null;
+            if (why != null) {
+                log("key action stood down", why + ": " + facts(key, e));
+                return null;
+            }
             remapKey = key;
             remapDownTime = e.getDownTime();
             if (KeyInjector.INSTANCE.ready()) {
                 remapSwallowed = true;
+                log("key held back", facts(key, e));
                 return Boolean.TRUE;
             }
+            log("key let through (no Shizuku)", facts(key, e));
             return null;
         }
         if (key != remapKey) return null;
@@ -318,6 +349,7 @@ public final class HoldService extends AccessibilityService
         // Its repeats never reach the app (no "aaaa" in a launcher search), before the hold time or after.
         if (now - remapDownTime < remapHold) return Boolean.TRUE;
         remapFired = true;
+        log("key action fired", "held " + (now - remapDownTime) + "ms: " + facts(key, e));
         fire(hold);
         return Boolean.TRUE;
     }

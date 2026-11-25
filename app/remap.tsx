@@ -1,6 +1,5 @@
-import { useState } from "react";
 import { Field, Screen, Section, SettingsChoices, Toggle, useSnapshot } from "ink";
-import { learnKey, open, set, state } from "../lib/titantools";
+import { open, set, state } from "../lib/titantools";
 import { Note } from "../lib/note";
 
 const holdTimes = [400, 500, 700, 1000];
@@ -8,7 +7,6 @@ const holdTimes = [400, 500, 700, 1000];
 /** Keys for actions (docs/key-remap-plan.md): the switch, the hold time, and a row per key with what it does. */
 export default function Remap() {
   const result = useSnapshot(state);
-  const [learning, setLearning] = useState(false);
   if (result.status !== "ready") return <Screen title="Keys for actions" />;
   const { remap } = result.data;
   const summary = (k: typeof remap.keys[number]) =>
@@ -18,7 +16,7 @@ export default function Remap() {
     <Section title="Keys for actions">
       <Toggle label="Keys run their actions" value={remap.on} onChange={on => void set("remap_on", on)} />
       {!remap.service && <Field label="Turn on Titan Tools in Accessibility" onPress={() => void open("accessibility")}>To do</Field>}
-      <Note>Needs Titan Tools in Accessibility to see the keys. In a text field, or while TitanKeys is typing, keys are left alone.</Note>
+      <Note>Needs Titan Tools in Accessibility to see the keys. While a text field is open, keys are left alone.</Note>
       <Note>{remap.shizuku
         ? "With Shizuku, a key with an action waits until you let go: a click then goes through as usual."
         : "Without Shizuku, a key's first press still goes through before its action runs."}</Note>
@@ -36,9 +34,6 @@ export default function Remap() {
     </Section>}
     {remap.on && <Section title="Keys">
       {remap.keys.map(k => <Field key={k.code} label={k.name} href={`/remap/${k.code}`}>{summary(k)}</Field>)}
-      <Field label="Add another key" disabled={!remap.service}
-        onPress={() => { setLearning(true); void learnKey(); }}>{learning ? "Press it now" : ""}</Field>
-      <Note>For the side key, Home, Recents and others: tap Add another key, then press the key within 10 seconds.</Note>
     </Section>}
   </Screen>;
 }
