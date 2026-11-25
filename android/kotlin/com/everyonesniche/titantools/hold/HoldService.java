@@ -52,6 +52,7 @@ public final class HoldService extends AccessibilityService
     private java.util.Map<Integer, String> remapDouble = java.util.Collections.emptyMap();
     private int remapHold = KeyRemap.DEFAULT_HOLD, remapKey = -1, lastUpKey = -1, pendingClick = -1, learnUp = -1;
     private long remapDownTime, lastUpAt, learnUntil;
+    private final java.util.Set<Integer> loggedCodes = new java.util.HashSet<>();
     /** A held-back click, sent once no second press came for a double press. */
     private final Runnable sendClick = this::flushClick;
 
@@ -195,6 +196,10 @@ public final class HoldService extends AccessibilityService
             // The keyboard light's log notes that a key went down (never which one).
             com.everyonesniche.titantools.light.LightService light = com.everyonesniche.titantools.light.LightService.Companion.getInstance();
             if (light != null) light.keyPressed();
+            // The log notes a special key's code the first time it's seen (never a printing key's, so nothing typed is kept).
+            if (!e.isPrintingKey() && loggedCodes.add(key))
+                com.everyonesniche.titantools.light.LightLog.INSTANCE.write("key code", key + " " + KeyEvent.keyCodeToString(key)
+                        + (key == KeyRemap.INSTANCE.getFUNC1() ? " (Func1, the side key)" : ""));
         }
         Boolean remapped = remap(e);
         if (remapped != null) return remapped;

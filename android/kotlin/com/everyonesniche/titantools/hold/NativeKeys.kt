@@ -21,12 +21,15 @@ object NativeKeys {
     private val FUNCTIONS = mapOf(0 to "None", 1 to "Ctrl", 2 to "Sym", 5 to "Tab", 7 to "Shift", 8 to "Alt")
 
     /** The button a key code belongs to, where it's known; null for a key added by pressing it (func1/func2 until learned). */
-    fun buttonFor(keyCode: Int): Button? = when (keyCode) {
+    fun buttonFor(keyCode: Int): Button? = when {
+        keyCode > 0 && keyCode == KeyRemap.FUNC1 -> BUTTONS[0]
+        else -> when (keyCode) {
         KeyEvent.KEYCODE_BACK -> BUTTONS[2]
         KeyEvent.KEYCODE_FUNCTION -> BUTTONS[3]
         KeyEvent.KEYCODE_SYM -> BUTTONS[4]
         KeyEvent.KEYCODE_SHIFT_RIGHT -> BUTTONS[5]
         else -> null
+        }
     }
 
     private fun get(context: Context, key: String): Int? = try {

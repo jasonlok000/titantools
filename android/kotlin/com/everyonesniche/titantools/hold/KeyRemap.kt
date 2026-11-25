@@ -32,8 +32,14 @@ object KeyRemap {
     /** The second press of a double press comes within this. */
     const val DOUBLE_MILLIS = 300L
 
-    /** The keys offered without adding them: the letters, then Back, Sym and fn. */
-    val SPECIALS = listOf(KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_SYM, KeyEvent.KEYCODE_FUNCTION)
+    /**
+     * The side key: scancode 249 on mtk-pmic-keys, "key 249 FUNC1" in the phone's Generic.kl, a vendor key code looked up at
+     * run time (0 where the phone has none).
+     */
+    val FUNC1: Int = KeyEvent.keyCodeFromString("KEYCODE_FUNC1")
+
+    /** The keys offered without adding them: the letters, then the side key (Func1), Back, Sym and fn. */
+    val SPECIALS = listOfNotNull(FUNC1.takeIf { it > 0 }, KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_SYM, KeyEvent.KEYCODE_FUNCTION)
     val LETTERS = (KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z).toList()
 
     val GLOBALS = linkedMapOf(
@@ -90,6 +96,7 @@ object KeyRemap {
 
     fun name(keyCode: Int): String = when (keyCode) {
         in LETTERS -> ('A' + (keyCode - KeyEvent.KEYCODE_A)).toString()
+        FUNC1 -> "Func1 (side key)"
         KeyEvent.KEYCODE_BACK -> "Back"
         KeyEvent.KEYCODE_SYM -> "Sym"
         KeyEvent.KEYCODE_FUNCTION -> "fn"
