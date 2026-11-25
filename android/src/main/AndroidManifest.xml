@@ -3,18 +3,18 @@
          signed with the same key can hold it. -->
     <permission
         android:name="com.everyonesniche.titantools.permission.LINK"
-        android:label="Talk to Titan Tools"
+        android:label="Talk to TitanTools"
         android:protectionLevel="signature" />
     <uses-permission android:name="com.everyonesniche.titantools.permission.LINK" />
-    <!-- The helper apps open Titan Tools' actions with this. They declare it too, so install order doesn't matter. -->
+    <!-- The helper apps open TitanTools' actions with this. They declare it too, so install order doesn't matter. -->
     <permission
         android:name="com.everyonesniche.titantools.permission.TRIGGER"
-        android:label="Open Titan Tools' actions"
+        android:label="Open TitanTools' actions"
         android:protectionLevel="signature" />
     <uses-permission android:name="com.everyonesniche.titantools.permission.TRIGGER" />
-    <!-- Installs the helper apps that come inside Titan Tools, when asked. Android asks first. -->
+    <!-- Installs the helper apps that come inside TitanTools, when asked. Android asks first. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
-    <!-- Widget buttons host any app's widget, which draws with that app's own resources: Titan Tools must see the app.
+    <!-- Widget buttons host any app's widget, which draws with that app's own resources: TitanTools must see the app.
          Matching widget apps by intent wasn't enough on Android 16. -->
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
     <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
@@ -155,11 +155,11 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
-        <!-- Titan Tools' Android shortcuts, for the places that take one. -->
+        <!-- TitanTools' Android shortcuts, for the places that take one. -->
         <activity
             android:name="com.everyonesniche.titantools.quick.CreateShortcutActivity"
             android:exported="true"
-            android:label="Titan Tools"
+            android:label="TitanTools"
             android:icon="@mipmap/ic_launcher"
             android:theme="@android:style/Theme.Material.NoActionBar">
             <intent-filter>
@@ -179,7 +179,7 @@
         </service>
         <service
             android:name="com.everyonesniche.titantools.hold.HoldService"
-            android:label="Titan Tools: Hold Symbols"
+            android:label="TitanTools: Hold Symbols"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
             android:exported="true">
             <intent-filter>

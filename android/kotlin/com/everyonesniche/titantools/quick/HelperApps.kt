@@ -9,7 +9,7 @@ import android.util.Log
 
 /**
  * The helper apps: one tiny app per action (and five widget slots), which the phone's Shortcut keys can pick, since it picks
- * apps rather than shortcuts. Each opens [TriggerActivity] and closes. Their APKs come inside Titan Tools (assets/helpers),
+ * apps rather than shortcuts. Each opens [TriggerActivity] and closes. Their APKs come inside TitanTools (assets/helpers),
  * and Android asks once per app before installing one.
  */
 object HelperApps {
@@ -31,7 +31,7 @@ object HelperApps {
         false
     }
 
-    /** Installs a helper from Titan Tools' own copy. Android shows its install question; the result comes to [Result]. */
+    /** Installs a helper from TitanTools' own copy. Android shows its install question; the result comes to [Result]. */
     fun install(context: Context, packageName: String) {
         val helper = all.firstOrNull { it.packageName == packageName } ?: throw IllegalArgumentException("Not a helper app")
         val installer = context.packageManager.packageInstaller

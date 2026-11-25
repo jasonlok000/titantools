@@ -14,8 +14,8 @@ export default function Remap() {
     subtitle="Hold a letter to open an app or run an action. Only outside text boxes, and a quick press stays a quick press.">
     <Section title="Keys for actions">
       <Toggle label="Keys run their actions" value={remap.on} onChange={on => void set("remap_on", on)} />
-      {!remap.service && <Field label="Turn on Titan Tools in Accessibility" onPress={() => void open("accessibility")}>To do</Field>}
-      <Note>Titan Tools needs Accessibility to see the keys. In a text box, keys are left alone.</Note>
+      {!remap.service && <Field label="Turn on TitanTools in Accessibility" onPress={() => void open("accessibility")}>To do</Field>}
+      <Note>TitanTools needs Accessibility to see the keys. In a text box, keys are left alone.</Note>
       <Note>{remap.shizuku
         ? "With Shizuku, a key with an action waits until you let go, so a quick press still types as usual."
         : "Without Shizuku, a held letter's first press still types before its action runs."}</Note>

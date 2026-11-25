@@ -8,8 +8,8 @@ import android.os.Bundle;
 import android.widget.Toast;
 
 /**
- * A Titan Tools helper app: the phone's Shortcut keys picks apps, so each one-press action is a tiny app of its own. Opening it
- * asks Titan Tools to do its action (from this activity's meta-data), then closes at once, with no screen.
+ * A TitanTools helper app: the phone's Shortcut keys picks apps, so each one-press action is a tiny app of its own. Opening it
+ * asks TitanTools to do its action (from this activity's meta-data), then closes at once, with no screen.
  */
 public final class Go extends Activity {
     @Override protected void onCreate(Bundle state) {
@@ -24,7 +24,7 @@ public final class Go extends Activity {
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(intent);
         } catch (Exception e) {
-            Toast.makeText(getApplicationContext(), "Install Titan Tools first.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getApplicationContext(), "Install TitanTools first.", Toast.LENGTH_SHORT).show();
         }
         finish();
         overridePendingTransition(0, 0);

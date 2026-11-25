@@ -74,7 +74,7 @@ private fun lightRule() {
     check("input flag: open", LightRule.lit(LightRule.Source.InputFlag, true, true, none, now, 2000, fieldOpen = true))
     check("input flag: closed within the stay", LightRule.lit(LightRule.Source.InputFlag, true, true, none, now, 2000, false, now - 1000))
     check("input flag: closed after the stay", !LightRule.lit(LightRule.Source.InputFlag, true, true, none, now, 2000, false, now - 2000))
-    check("key presses: Titan Tools never lights itself", !LightRule.lit(LightRule.Source.FirmwareKeys, true, true, typing, now, 5000))
+    check("key presses: TitanTools never lights itself", !LightRule.lit(LightRule.Source.FirmwareKeys, true, true, typing, now, 5000))
     check("key presses: the level while dark", LightRule.firmwareLevelOn(LightRule.Source.FirmwareKeys, true, true))
     check("key presses: 0 when not dark or screen off",
         !LightRule.firmwareLevelOn(LightRule.Source.FirmwareKeys, false, true) && !LightRule.firmwareLevelOn(LightRule.Source.FirmwareKeys, true, false))
@@ -112,10 +112,10 @@ private fun lightRule() {
 }
 
 private fun adoption() {
-    check("adopt: the phone's own 11 while Titan Tools wrote 24", VendorKeys.adopt("11", "24") == 11)
-    check("adopt: the phone's own 11 while Titan Tools wrote 0", VendorKeys.adopt("11", "0") == 11)
+    check("adopt: the phone's own 11 while TitanTools wrote 24", VendorKeys.adopt("11", "24") == 11)
+    check("adopt: the phone's own 11 while TitanTools wrote 0", VendorKeys.adopt("11", "0") == 11)
     check("adopt: never 0", VendorKeys.adopt("0", "24") == null)
-    check("adopt: Titan Tools' own value isn't adopted", VendorKeys.adopt("24", "24") == null)
+    check("adopt: TitanTools' own value isn't adopted", VendorKeys.adopt("24", "24") == null)
     check("adopt: nothing written yet, nothing adopted", VendorKeys.adopt("100", null) == null)
     check("adopt: missing or garbage, nothing", VendorKeys.adopt(VendorKeys.MISSING, "24") == null && VendorKeys.adopt("300", "24") == null)
 }
@@ -148,7 +148,7 @@ private fun vendorKeys() {
     check("restore: owner's phone, only the level", VendorKeys.restoreWrites(saved, "-1", "64") == listOf(W(L, "100")))
     check("restore: nothing saved for a key, left alone", VendorKeys.restoreWrites(VendorKeys.Saved(null, null), "-1", "64").isEmpty())
     check("restore: missing now, left alone", VendorKeys.restoreWrites(saved, M, M).isEmpty())
-    // Old NightKeys' leftover timeout, before Titan Tools ever owned the keys.
+    // Old NightKeys' leftover timeout, before TitanTools ever owned the keys.
     check("legacy: missing timeout, nothing", VendorKeys.legacyRestore(M, "-1") == null)
     check("legacy: missing backup, nothing", VendorKeys.legacyRestore("0", M) == null)
     check("legacy: same, nothing", VendorKeys.legacyRestore("30000", "30000") == null)
@@ -298,12 +298,12 @@ private fun killApp() {
       * Hist  #1: ActivityRecord{c3 u0 com.android.deskclock/.DeskClock t7}
       * Hist  #0: ActivityRecord{d4 u0 com.android.launcher3/.Launcher t1}
     """
-    check("kill: the app in front, past Titan Tools' own", KillRule.frontApp(dump) == "com.android.deskclock")
+    check("kill: the app in front, past TitanTools' own", KillRule.frontApp(dump) == "com.android.deskclock")
     check("kill: nothing listed", KillRule.frontApp("nothing") == null)
     val launchers = setOf("com.android.launcher3")
     check("kill: a normal app can go", !KillRule.protected("com.android.deskclock", "com.titankeys", launchers, false, setOf("com.android.dialer")))
     check("kill: never the keyboard", KillRule.protected("com.titankeys", "com.titankeys", launchers, false, emptySet()))
-    check("kill: never home, system UI, Shizuku, Titan Tools",
+    check("kill: never home, system UI, Shizuku, TitanTools",
         listOf("com.android.launcher3", "com.android.systemui", "moe.shizuku.privileged.api", "com.everyonesniche.titantools",
             "com.everyonesniche.titantools.rotate").all { KillRule.protected(it, null, launchers, false, emptySet()) })
     check("kill: the phone app only during a call", KillRule.protected("com.android.dialer", null, launchers, true, setOf("com.android.dialer")) &&

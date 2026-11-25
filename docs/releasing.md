@@ -1,6 +1,6 @@
-# Releasing Titan Tools
+# Releasing TitanTools
 
-The GitHub repo `jasonlok000/titantools` is **public** (owner, 2026-11-24). Releases stay `--prerelease` until the owner says otherwise. Titan Tools checks the newest release, pre-releases included (`https://api.github.com/repos/jasonlok000/titantools/releases?per_page=1`) for update notices (core/Updates.kt, `FEED_URL`), so raise `versionName` for each release: notices compare it, not the version code.
+The GitHub repo `jasonlok000/titantools` is **public** (owner, 2026-11-24). Releases stay `--prerelease` until the owner says otherwise. TitanTools checks the newest release, pre-releases included (`https://api.github.com/repos/jasonlok000/titantools/releases?per_page=1`) for update notices (core/Updates.kt, `FEED_URL`), so raise `versionName` for each release: notices compare it, not the version code.
 
 ## Build
 
@@ -8,7 +8,7 @@ From Windows PowerShell:
 
     wsl -d atlas-build -u dev bash /mnt/x/TitanTools/tools/build.sh release
 
-The build ends with `RESULT: PASS` and writes `~/build/titantools/dist/titan-tools-<versionName>.apk` in WSL. It is signed with the NightKeys key on the build machine; never copy key files or passwords out of it.
+The build ends with `RESULT: PASS` and writes `~/build/titantools/dist/titantools-<versionName>.apk (titan-tools-… before 1.1.2)` in WSL. It is signed with the NightKeys key on the build machine; never copy key files or passwords out of it.
 
 ## Check the APK
 
@@ -27,7 +27,7 @@ Expected signer:
 Copy the APK to a Windows path, and also copy it as a plain `titantools.apk` (the website's Download button points at
 `releases/latest/download/titantools.apk`, so every release needs that name too). Then:
 
-    gh release create v<versionName> <apk> titantools.apk --repo jasonlok000/titantools --prerelease --title "Titan Tools <versionName>" --notes "<short notes>"
+    gh release create v<versionName> <apk> titantools.apk --repo jasonlok000/titantools --prerelease --title "TitanTools <versionName>" --notes "<short notes>"
 
 `releases/latest` only finds full releases, never pre-releases: while every release is a pre-release, that link answers 404.
 Mark a release as a full release (drop `--prerelease`, or `gh release edit v<versionName> --prerelease=false`) when the

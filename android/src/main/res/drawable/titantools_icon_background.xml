@@ -1,4 +1,4 @@
-<!-- The Titan Tools icon's background (logo direction C, owner 2026-11-24): cream with a faint grid, full bleed. -->
+<!-- The TitanTools icon's background (logo direction C, owner 2026-11-24): cream with a faint grid, full bleed. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
     <path android:fillColor="#FFF1E6" android:pathData="M0,0 H108 V108 H0 Z"/>
     <path android:strokeColor="#E8D9CB" android:strokeWidth="0.6" android:pathData="M18,0 V108 M36,0 V108 M54,0 V108 M72,0 V108 M90,0 V108 M0,18 H108 M0,36 H108 M0,54 H108 M0,72 H108 M0,90 H108"/>

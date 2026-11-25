@@ -10,7 +10,7 @@ import android.widget.FrameLayout
 import android.widget.RemoteViews
 
 /**
- * Titan Tools' widget host. Some widgets (1Valet's, made with Glance) failed to draw in it: Android looked their layouts up in
+ * TitanTools' widget host. Some widgets (1Valet's, made with Glance) failed to draw in it: Android looked their layouts up in
  * the wrong app's resources ("Couldn't add widget"). Its views draw them with the widget app's own context when Android's
  * way fails, so the widget shows and its buttons work.
  */

@@ -45,7 +45,7 @@ object NightMode {
             }
             val message = when {
                 !Shizuku.running() -> "Start Shizuku, then try again."
-                !Shizuku.allowed() -> "Allow Titan Tools in Shizuku first. Open Titan Tools to set it up."
+                !Shizuku.allowed() -> "Allow TitanTools in Shizuku first. Open TitanTools to set it up."
                 active(app) -> if (turnOff(app)) "Night mode off" else "Couldn't turn Night mode off"
                 else -> if (turnOn(app)) "Night mode on" else "Couldn't turn Night mode on"
             }

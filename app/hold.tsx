@@ -18,7 +18,7 @@ export default function Hold() {
     <Section title="Accessibility">
       <Field label="Turn on in Accessibility" onPress={() => void open("accessibility")}>{hold.accessibility ? "On" : "Off"}</Field>
       {!hold.accessibility && <>
-        <Note>Find Titan Tools: Hold Symbols in the list and turn it on. Android says it's restricted? Open App info, tap ⋮, pick Allow restricted settings, then try again.</Note>
+        <Note>Find TitanTools: Hold Symbols in the list and turn it on. Android says it's restricted? Open App info, tap ⋮, pick Allow restricted settings, then try again.</Note>
         <Field label="Open App info" onPress={() => void open("appInfo")}>{""}</Field>
       </>}
     </Section>

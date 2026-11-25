@@ -5,7 +5,7 @@ import android.content.SharedPreferences
 import com.everyonesniche.titantools.light.LightLevels
 import com.everyonesniche.titantools.light.LightRule
 
-/** Titan Tools' settings, all in one file. */
+/** TitanTools' settings, all in one file. */
 object Prefs {
     const val LIGHT_ON = "light_on"
     const val SCALE_ON = "scale_on"
@@ -31,7 +31,7 @@ object Prefs {
     const val LIGHT_NIGHT_FROM = "light_night_from"
     const val LIGHT_NIGHT_TO = "light_night_to"
     const val LIGHT_ACTIVITY = "light_activity"
-    /** Only while typing in Night mode: Typing while Titan Tools' Night mode is on, whatever the rule. */
+    /** Only while typing in Night mode: Typing while TitanTools' Night mode is on, whatever the rule. */
     const val LIGHT_NIGHT_TYPING = "light_night_typing"
     const val FLASH_ON = "flash_on"
     const val PLAY_ON = "play_on"
@@ -60,7 +60,7 @@ object Prefs {
     const val NIGHT_SAVED_THEME = "night_saved_theme"
     const val NIGHT_USED_THEME = "night_used_theme"
     const val LIGHT_STAY_SECONDS = "light_stay_seconds"
-    /** The level Titan Tools last wrote to the firmware's keyboard_led_brightness, to tell the phone's own changes apart. */
+    /** The level TitanTools last wrote to the firmware's keyboard_led_brightness, to tell the phone's own changes apart. */
     const val LED_WRITTEN = "led_written"
     const val HOLD_MILLIS = "hold_millis"
     const val HOLD_VIBRATE = "hold_vibrate"
@@ -68,7 +68,7 @@ object Prefs {
     const val PHONE_DPI = "phone_dpi"
     const val TABLET_DPI = "tablet_dpi"
     const val TIMEOUT_MIGRATED = "timeout_migrated"
-    /** The phone's own key light settings are saved, and Titan Tools owns them until the light tool is off (VendorKeys). */
+    /** The phone's own key light settings are saved, and TitanTools owns them until the light tool is off (VendorKeys). */
     const val VENDOR_SAVED = "vendor_saved"
     const val SAVED_TIMEOUT = "saved_timeout"
     const val SAVED_LED = "saved_led"

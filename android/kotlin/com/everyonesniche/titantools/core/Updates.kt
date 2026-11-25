@@ -19,7 +19,7 @@ import java.net.URL
 import java.util.concurrent.Executors
 
 /**
- * Update notices, in your face because Titan Tools never updates by itself: it looks for a newer release on every app open (at
+ * Update notices, in your face because TitanTools never updates by itself: it looks for a newer release on every app open (at
  * most every 10 minutes) and every 3 hours in the background. While one is out, a silent heads-up notification opening its
  * release page comes back once a day until you update, and the home screen shows a banner. The Updates switch turns the
  * checks off. After an update, the home screen shows what's new once.
@@ -28,7 +28,7 @@ import java.util.concurrent.Executors
  * ({"version": "1.2.0", "versionCode": 25, "url": â€¦}). While the repo is private GitHub answers 404 and nothing is shown.
  */
 object Updates {
-    /** The one place to change where Titan Tools looks for updates. */
+    /** The one place to change where TitanTools looks for updates. */
     const val FEED_URL = "https://api.github.com/repos/jasonlok000/titantools/releases?per_page=1"
     /** Heads-up but silent. A new id, as a channel's importance can't be raised once made (the first "updates" was default). */
     private const val CHANNEL = "updates_heads_up"
@@ -139,10 +139,10 @@ object Updates {
 
     private fun notify(context: Context, release: Release) {
         val manager = context.getSystemService(NotificationManager::class.java)
-        if (!manager.areNotificationsEnabled()) com.everyonesniche.titantools.light.LightLog.write("update notice blocked", "notifications are off for Titan Tools; the home screen banner still shows")
+        if (!manager.areNotificationsEnabled()) com.everyonesniche.titantools.light.LightLog.write("update notice blocked", "notifications are off for TitanTools; the home screen banner still shows")
         manager.deleteNotificationChannel("updates")
         manager.createNotificationChannel(NotificationChannel(CHANNEL, "Updates", NotificationManager.IMPORTANCE_HIGH).apply {
-            description = "When a new Titan Tools is out. Once a day until you update."
+            description = "When a new TitanTools is out. Once a day until you update."
             setSound(null, null)
             enableVibration(false)
         })
@@ -151,13 +151,13 @@ object Updates {
         try {
             manager.notify(NOTIFICATION, Notification.Builder(context, CHANNEL)
                 .setSmallIcon(com.everyonesniche.titantools.res.R.drawable.titantools_notification)
-                .setContentTitle("Titan Tools ${release.version} is out")
+                .setContentTitle("TitanTools ${release.version} is out")
                 .setContentText("Tap to get it from the release page.")
                 .setContentIntent(open)
                 .setAutoCancel(true)
                 .build())
         } catch (error: SecurityException) {
-            com.everyonesniche.titantools.light.LightLog.write("update notice blocked", "notifications are off for Titan Tools")
+            com.everyonesniche.titantools.light.LightLog.write("update notice blocked", "notifications are off for TitanTools")
         }
     }
 

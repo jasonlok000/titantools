@@ -5,7 +5,7 @@ import com.everyonesniche.titantools.light.VendorKeys
 import com.everyonesniche.titantools.light.VendorReply
 
 /**
- * Every command Titan Tools runs through Shizuku, each a fixed argument list with checked numbers. There is no way to run
+ * Every command TitanTools runs through Shizuku, each a fixed argument list with checked numbers. There is no way to run
  * anything else, and nothing typed or sensed goes into a command except a checked whole number.
  */
 object Shell {

@@ -1,6 +1,6 @@
 package com.everyonesniche.titantools.core
 
-/** The three apps Titan Tools replaces. Pure, so tests can run it. */
+/** The three apps TitanTools replaces. Pure, so tests can run it. */
 object OldApps {
     enum class Tool(val id: String) { Light("light"), Scale("scale"), Hold("hold") }
 

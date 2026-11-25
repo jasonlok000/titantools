@@ -4,7 +4,7 @@ import { Note } from "../lib/note";
 
 /**
  * One-press actions. The phone's Shortcut keys picks apps, so each action has a tiny helper app (installed from here), and
- * Titan Tools also offers Android shortcuts for the places that take them.
+ * TitanTools also offers Android shortcuts for the places that take them.
  */
 export default function Shortcuts() {
   const result = useSnapshot(state);
@@ -34,7 +34,7 @@ export default function Shortcuts() {
     <Section title="Apps for Shortcut keys">
       {helpers.map(h => <Field key={h.packageName} label={h.label}
         onPress={h.installed ? undefined : () => void installHelper(h.packageName)}>{h.installed ? "Installed" : "Install"}</Field>)}
-      <Note>Android asks once per app. If Shortcut keys wants a shortcut instead of an app, pick Titan Tools' shortcuts.</Note>
+      <Note>Android asks once per app. If Shortcut keys wants a shortcut instead of an app, pick TitanTools' shortcuts.</Note>
       <Field label="Open Shortcut keys" onPress={() => void open("shortcutKeys")}>{""}</Field>
     </Section>
   </Screen>;

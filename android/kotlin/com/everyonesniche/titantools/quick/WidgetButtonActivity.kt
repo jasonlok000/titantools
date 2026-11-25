@@ -32,9 +32,9 @@ class WidgetButtonActivity : Activity() {
         val list = WidgetButton.all(this)
         val slot = intent.getIntExtra(EXTRA_SLOT, 0)
         val picked = if (slot > 0) WidgetList.forSlot(list, slot) else list.firstOrNull { it.id == intent.getStringExtra(EXTRA_ENTRY) }
-        if (picked == null) return close(if (slot > 0) "Widget $slot is empty. Pick a button in Titan Tools." else "Pick the widget again in Titan Tools.")
+        if (picked == null) return close(if (slot > 0) "Widget $slot is empty. Pick a button in TitanTools." else "Pick the widget again in TitanTools.")
         entry = picked
-        val info = WidgetButton.info(this, picked) ?: return close("Pick the widget again in Titan Tools.")
+        val info = WidgetButton.info(this, picked) ?: return close("Pick the widget again in TitanTools.")
         host.startListening()
         val hostView = host.createView(applicationContext, picked.widgetId, info)
         view = hostView
@@ -55,10 +55,10 @@ class WidgetButtonActivity : Activity() {
             Log.i(TAG, "Widget button ${picked.name}: ${if (pressed) "pressed" else "couldn't press"} (${WidgetButton.pressKind(target)})")
             // A moment for the widget's action to start before the host goes.
             val said = if (picked.slot > 0) "Widget ${picked.slot} – ${picked.app}" else picked.name
-            main.postDelayed({ close(if (pressed) said else "Pick the widget again in Titan Tools.") }, 600)
+            main.postDelayed({ close(if (pressed) said else "Pick the widget again in TitanTools.") }, 600)
             return
         }
-        if (++tries >= 60) return close("Pick the widget again in Titan Tools.")
+        if (++tries >= 60) return close("Pick the widget again in TitanTools.")
         main.postDelayed(::attempt, 100)
     }
 

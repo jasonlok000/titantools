@@ -3,7 +3,7 @@ import { Field, Screen, Section, SettingsChoices, TextInput, useSnapshot } from 
 import { open, set, state } from "../lib/titantools";
 import { Note } from "../lib/note";
 
-/** The range Titan Tools accepts for a custom size (ScaleSettings). 0 is the phone's own size. */
+/** The range TitanTools accepts for a custom size (ScaleSettings). 0 is the phone's own size. */
 const MIN = 200;
 const MAX = 480;
 

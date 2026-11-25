@@ -70,7 +70,7 @@ object LightRule {
     }
 
     /**
-     * The activity in use: Typing while "Only while typing in Night mode" is on and Titan Tools' Night mode is on, else the
+     * The activity in use: Typing while "Only while typing in Night mode" is on and TitanTools' Night mode is on, else the
      * chosen one.
      */
     fun effectiveActivity(chosen: Activity, nightTyping: Boolean, nightModeOn: Boolean): Activity =
@@ -90,8 +90,8 @@ object LightRule {
     const val FIRMWARE_MIN_STAY_MILLIS = 1000L
 
     /**
-     * Titan Tools' own light is on. With [Source.FirmwareKeys] it never is: the firmware lights the keys on presses, and
-     * Titan Tools only gives it the level while it's dark ([firmwareLevelOn]). [fieldOpen] and [fieldClosedAt] are the input
+     * TitanTools' own light is on. With [Source.FirmwareKeys] it never is: the firmware lights the keys on presses, and
+     * TitanTools only gives it the level while it's dark ([firmwareLevelOn]). [fieldOpen] and [fieldClosedAt] are the input
      * flag's reading and when it last went from open to closed.
      */
     fun lit(source: Source, dark: Boolean, screenOn: Boolean, link: Link, now: Long, stayMillis: Long,

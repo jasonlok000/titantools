@@ -8,7 +8,7 @@ import com.everyonesniche.titantools.core.Prefs
 /** The "Play/Pause" launcher entry: sends play/pause to the app that last played something. No Shizuku. */
 class PlayPauseActivity : QuickActivity() {
     override fun act(done: (String?) -> Unit) {
-        if (!Prefs.on(this, Prefs.PLAY_ON)) return done("Play/Pause is off. Turn it on in Titan Tools.")
+        if (!Prefs.on(this, Prefs.PLAY_ON)) return done("Play/Pause is off. Turn it on in TitanTools.")
         // Music playing now means this press pauses it; otherwise it plays (the app decides, so it's a good guess).
         val playing = getSystemService(AudioManager::class.java)?.isMusicActive == true
         send(this)

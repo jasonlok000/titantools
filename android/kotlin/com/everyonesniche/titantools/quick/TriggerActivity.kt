@@ -8,7 +8,7 @@ import com.everyonesniche.titantools.rotate.RotateActivity
 import com.everyonesniche.titantools.scale.ScaleActivity
 
 /**
- * Where the helper apps (Rotate, Flashlight, Widget 1 …) and Titan Tools' Android shortcuts land. Only apps signed with the
+ * Where the helper apps (Rotate, Flashlight, Widget 1 …) and TitanTools' Android shortcuts land. Only apps signed with the
  * same key can open it (com.everyonesniche.titantools.permission.TRIGGER). It passes the action on and closes, with no screen.
  */
 class TriggerActivity : Activity() {

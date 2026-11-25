@@ -48,14 +48,14 @@ object Shizuku {
     /** Shizuku is running and this app holds its binder. */
     fun running(): Boolean = attached && server?.pingBinder() == true
 
-    /** Running, and Titan Tools is allowed in Shizuku. */
+    /** Running, and TitanTools is allowed in Shizuku. */
     fun allowed(): Boolean = running() && try {
         boolCall(16).also { if (it) remember() }
     } catch (error: Exception) {
         false
     }
 
-    /** Titan Tools was allowed in Shizuku once, so a stopped Shizuku means it needs starting again (after a restart). */
+    /** TitanTools was allowed in Shizuku once, so a stopped Shizuku means it needs starting again (after a restart). */
     fun everAllowed(context: Context): Boolean = prefs(context).getBoolean("ever_allowed", false)
 
     private fun remember() {

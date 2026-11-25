@@ -14,7 +14,7 @@ import org.json.JSONObject
 
 /**
  * Widget buttons: buttons of any app's widgets (such as a door unlock widget that has no shortcut of its own), pressed from a
- * helper app or an Android shortcut. Titan Tools hosts each widget itself, remembers which of its views was picked, and clicks
+ * helper app or an Android shortcut. TitanTools hosts each widget itself, remembers which of its views was picked, and clicks
  * that view, which fires the widget's own action. The list itself is [WidgetList].
  */
 object WidgetButton {
@@ -23,7 +23,7 @@ object WidgetButton {
 
     fun host(context: Context): AppWidgetHost = TitanWidgetHost(context.applicationContext, HOST_ID)
 
-    // The list, kept as JSON in Titan Tools' settings.
+    // The list, kept as JSON in TitanTools' settings.
 
     fun all(context: Context): List<WidgetList.Entry> {
         migrate(context)

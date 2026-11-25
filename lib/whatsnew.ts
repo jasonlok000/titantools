@@ -4,7 +4,7 @@
  */
 const notes: Record<number, string[]> = {
   42: [
-    "Clearer words all through Titan Tools.",
+    "Clearer words all through TitanTools.",
     "Keys for actions also leave number, phone and date boxes alone.",
     "Keyboard light: a room right at your dark setting now counts as dark.",
   ],
@@ -16,10 +16,10 @@ const notes: Record<number, string[]> = {
   29: [
     "Keys for actions: hold a letter to open an app or run an action.",
     "Keyboard light: two new choices, In the dark while a text box is open, and While typing (or swiping). Typing now means pressing or swiping, not just a text box opening.",
-    "A new version now also shows up when you open Titan Tools.",
+    "A new version now also shows up when you open TitanTools.",
   ],
   23: [
-    "Update notices: Titan Tools now checks for new versions and tells you, with a link to the release page.",
+    "Update notices: TitanTools now checks for new versions and tells you, with a link to the release page.",
     "Keyboard light: brightness and dark room are in percent now. Tap one to slide it, and brightness lights the keys as you go.",
     "Keyboard light: shows how bright your room is right now, and every choice says when the keys light.",
   ],

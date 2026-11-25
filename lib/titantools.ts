@@ -87,7 +87,7 @@ export const seenWhatsNew = () => then(native("seenWhatsNew"));
 export const requestShizuku = () => native("requestShizuku");
 export const uninstall = (packageName: string) => native("uninstall", { packageName });
 
-/** Every step of setup is done: Shizuku installed, running, and Titan Tools allowed in it. */
+/** Every step of setup is done: Shizuku installed, running, and TitanTools allowed in it. */
 export const ready = (s: State) => s.shizuku.installed && s.shizuku.running && s.shizuku.allowed;
 
 /** After a restart Shizuku stops: it was allowed before and is installed, but isn't running now. */

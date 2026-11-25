@@ -10,7 +10,7 @@ const presetNotes: Record<LightPreset, string> = {
   dark_field: "Lit when it's dark and a text box is open.",
   typing: "Lit whenever you're typing, dark or not. Off the rest of the time.",
   always_dark: "Lit when it's dark and the screen is on.",
-  phone: "Your phone's own key light settings. Titan Tools stays out of it.",
+  phone: "Your phone's own key light settings. TitanTools stays out of it.",
   custom: "Pick when, and what, below.",
 };
 const presets = presetIds.map(value => ({ value, label: presetName(value), note: presetNotes[value] }));
@@ -74,6 +74,6 @@ export default function Light() {
       <SettingsChoices value={String(light.nightTo)} options={halfHours.map(m => ({ value: String(m), label: clock(m) }))}
         onChange={value => void set("light_night_to", Number(value))} />
     </Section>}
-    <Note>While this is on, Titan Tools runs the phone's key light. Turn it off and the phone's own settings come back.</Note>
+    <Note>While this is on, TitanTools runs the phone's key light. Turn it off and the phone's own settings come back.</Note>
   </Screen>;
 }

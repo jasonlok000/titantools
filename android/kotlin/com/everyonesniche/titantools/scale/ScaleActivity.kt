@@ -39,7 +39,7 @@ class ScaleActivity : Activity() {
             return
         }
         if (!Prefs.on(this, Prefs.SCALE_ON)) {
-            complete("Scale Toggle is off. Turn it on in Titan Tools.")
+            complete("Scale Toggle is off. Turn it on in TitanTools.")
             return
         }
         if (Shizuku.running()) start()
@@ -58,7 +58,7 @@ class ScaleActivity : Activity() {
         main.removeCallbacks(waitForShizuku)
         stopListening?.invoke()
         if (!Shizuku.allowed()) {
-            complete("Allow Titan Tools in Shizuku first. Open Titan Tools to set it up.")
+            complete("Allow TitanTools in Shizuku first. Open TitanTools to set it up.")
             return
         }
         work.execute {

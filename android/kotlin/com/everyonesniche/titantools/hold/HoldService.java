@@ -155,7 +155,7 @@ public final class HoldService extends AccessibilityService
 
     /** Why the tool is stepping aside overall, for the home screen, or null when it's working. */
     public String pauseReason() {
-        if (dead) return "Paused: turn Titan Tools on in Accessibility";
+        if (dead) return "Paused: turn TitanTools on in Accessibility";
         if (titanKeysSelected) return "Paused: TitanKeys does holds itself";
         if (oldAppOn) return "Paused: the old Hold Symbols app is still on";
         if (!KeyInjector.INSTANCE.ready()) return "Paused: start Shizuku";
@@ -228,7 +228,7 @@ public final class HoldService extends AccessibilityService
     /** You're typing: a text field has the focus, or TitanKeys said it's typing in the last 3 seconds. Then holds stay TitanKeys'. */
     private boolean typing() {
         // A text field is connected: input started for a text class field (TYPE_NULL and fallback connections don't count).
-        // TitanKeys' TYPING messages aren't used: TitanKeys sends one for every key it gets, including the clicks Titan Tools
+        // TitanKeys' TYPING messages aren't used: TitanKeys sends one for every key it gets, including the clicks TitanTools
         // lets through or sends again, so they made holds stand down in apps with no field at all.
         // Any field you type into: text, number, phone or date (Hold Symbols itself stays text-only through editorActive).
         boolean field = (lastInputType & InputType.TYPE_MASK_CLASS) != InputType.TYPE_NULL && input != null && input.getCurrentInputStarted();

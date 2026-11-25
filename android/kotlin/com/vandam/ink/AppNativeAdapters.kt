@@ -116,8 +116,8 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
         val release = com.everyonesniche.titantools.core.Updates.available(activity) ?: return
         updateOffered = true
         android.app.AlertDialog.Builder(activity)
-            .setTitle("Titan Tools ${release.version} is out")
-            .setMessage("Titan Tools doesn't update itself. Get it opens the release page, where you download the new one.")
+            .setTitle("TitanTools ${release.version} is out")
+            .setMessage("TitanTools doesn't update itself. Get it opens the release page, where you download the new one.")
             .setPositiveButton("Get it") { _, _ ->
                 try { activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(release.url))) } catch (ignored: Exception) {}
             }
@@ -349,7 +349,7 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
         val shizukuPause = when {
             !installed -> "Paused: Shizuku isn't installed"
             !running -> "Paused: start Shizuku"
-            !allowed -> "Paused: allow Titan Tools in Shizuku"
+            !allowed -> "Paused: allow TitanTools in Shizuku"
             else -> null
         }
         val defaultIme = Settings.Secure.getString(activity.contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD)

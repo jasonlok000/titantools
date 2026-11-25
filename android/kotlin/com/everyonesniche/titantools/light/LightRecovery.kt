@@ -63,7 +63,7 @@ object LightRecovery {
             } else {
                 // Builds before version code 5 didn't note what they wrote: then it was the level, or 0.
                 VendorKeys.adopt(led, prefs.getString(Prefs.LED_WRITTEN, null) ?: level.toString())?.let { adopted ->
-                    Log.i(TAG, "The phone's own key light level changed to $adopted: Titan Tools uses it too")
+                    Log.i(TAG, "The phone's own key light level changed to $adopted: TitanTools uses it too")
                     Prefs.setLevel(context, adopted)
                     prefs.edit().putString(Prefs.LED_WRITTEN, adopted.toString()).commit()
                     use = adopted
@@ -80,7 +80,7 @@ object LightRecovery {
                     prefs.edit().putString(Prefs.LED_WRITTEN, write.value).commit()
                 }
             }
-            // Already right, after a restart: still note it as Titan Tools' own value.
+            // Already right, after a restart: still note it as TitanTools' own value.
             if (prefs.getString(Prefs.LED_WRITTEN, null) == null && VendorKeys.validLed(led) && led!!.trim() == (if (lit) use.toString() else "0"))
                 prefs.edit().putString(Prefs.LED_WRITTEN, led.trim()).commit()
         } catch (error: Exception) {
@@ -91,7 +91,7 @@ object LightRecovery {
     }
 
     /**
-     * The tool is off: the phone's own key light settings go back, and the firmware is in charge again. Before Titan Tools
+     * The tool is off: the phone's own key light settings go back, and the firmware is in charge again. Before TitanTools
      * ever owned them, once: what old NightKeys left in the timeout goes back to the firmware's own backup.
      */
     @Synchronized

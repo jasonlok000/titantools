@@ -85,7 +85,7 @@ object Rotation {
     fun flip(context: Context, done: (String) -> Unit) {
         val app = context.applicationContext
         if (!Prefs.on(app, Prefs.ROTATION_ON)) {
-            done("Rotation is off. Turn it on in Titan Tools.")
+            done("Rotation is off. Turn it on in TitanTools.")
             return
         }
         work.execute {
@@ -96,7 +96,7 @@ object Rotation {
             }
             val message = when {
                 !Shizuku.running() -> "Start Shizuku, then try again."
-                !Shizuku.allowed() -> "Allow Titan Tools in Shizuku first. Open Titan Tools to set it up."
+                !Shizuku.allowed() -> "Allow TitanTools in Shizuku first. Open TitanTools to set it up."
                 else -> try {
                     // The rotation asked for, not the screen's: an app that insists on portrait could hold the screen upright.
                     val chosen = readSystem(app, Settings.System.USER_ROTATION)

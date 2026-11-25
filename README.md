@@ -1,4 +1,4 @@
-# Titan Tools
+# TitanTools
 
 Small tools for the Unihertz Titan 2 Elite, in one app. Turn on the ones you want.
 
@@ -8,17 +8,17 @@ Small tools for the Unihertz Titan 2 Elite, in one app. Turn on the ones you wan
 - **Scale Toggle**: a long press of the side button flips between phone layout (300 DPI) and tablet layout.
 - **Shortcuts**: switch layout, rotate, flashlight, Night mode, Play/Pause, Kill app and widget buttons, for the phone's Shortcut keys.
 
-It takes the place of NightKeys, Scale Toggle and Titan Hold Symbols. If you have those, Titan Tools offers to remove them.
+It takes the place of NightKeys, Scale Toggle and Titan Hold Symbols. If you have those, TitanTools offers to remove them.
 
 Most tools work through [Shizuku](https://shizuku.rikka.app/). The app's setup walks you through it in three steps.
 
 ## Download
 
-Get the latest APK from [releases](https://github.com/jasonlok000/titantools/releases/latest). Titan Tools tells you when a new version is out.
+Get the latest APK from [releases](https://github.com/jasonlok000/titantools/releases/latest). TitanTools tells you when a new version is out.
 
 ## How the keyboard light works
 
-While it's on, Titan Tools runs the phone's own key light settings (`keyboard_led_brightness` = its level or 0, `keyboard_brightness_timeout` = -1), so key presses keep that level, and it writes the light directly at each change (`service call agui_functional_service 7 s16 <level>`). The phone's own values are saved first and go back when you turn it off.
+While it's on, TitanTools runs the phone's own key light settings (`keyboard_led_brightness` = its level or 0, `keyboard_brightness_timeout` = -1), so key presses keep that level, and it writes the light directly at each change (`service call agui_functional_service 7 s16 <level>`). The phone's own values are saved first and go back when you turn it off.
 
 ## The link with TitanKeys
 

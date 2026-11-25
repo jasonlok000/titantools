@@ -3,7 +3,7 @@ import { Screen, Section, SettingsChoices, back, useRouteParams, useSnapshot } f
 import { listApps, setRemap, state } from "../../lib/titantools";
 import { Note } from "../../lib/note";
 
-/** Titan Tools' own actions and the system's, by the ids KeyRemap.kt runs. */
+/** TitanTools' own actions and the system's, by the ids KeyRemap.kt runs. */
 const actions = [
   { value: "", label: "Nothing" },
   { value: "do:flashlight", label: "Flashlight" },
@@ -41,7 +41,7 @@ export default function RemapKey() {
   return <Screen title={`Hold ${k.name}`} subtitle={k.hold?.label ?? "Nothing yet"}>
     <Section title="Action">
       <SettingsChoices value={current} options={options} onChange={pick} />
-      <Note>Titan Tools can't switch Wi-Fi, Bluetooth or mobile data directly, so this opens Quick settings instead.</Note>
+      <Note>TitanTools can't switch Wi-Fi, Bluetooth or mobile data directly, so this opens Quick settings instead.</Note>
     </Section>
     <Section title="Open an app">
       {apps.length === 0 ? <Note>Loading the apps…</Note>

@@ -13,7 +13,7 @@ import android.widget.TextView
 import com.everyonesniche.titantools.res.R
 
 /**
- * Titan Tools' Android shortcuts, for the places that take one (such as some Shortcut keys slots): pick an action or a widget
+ * TitanTools' Android shortcuts, for the places that take one (such as some Shortcut keys slots): pick an action or a widget
  * button, and the shortcut opens it through [TriggerActivity].
  */
 class CreateShortcutActivity : Activity() {
@@ -24,7 +24,7 @@ class CreateShortcutActivity : Activity() {
             setPadding(dp(24f), dp(40f), dp(24f), dp(24f))
             setBackgroundColor(Color.BLACK)
         }
-        list.addView(row("Titan Tools shortcut", 24f, ORANGE, null))
+        list.addView(row("TitanTools shortcut", 24f, ORANGE, null))
         for ((action, label) in TriggerActivity.ACTIONS) list.addView(row(label, 20f, CREAM) { done(action, null, label, ICONS[action]!!) })
         for (entry in WidgetButton.all(this)) list.addView(row(entry.name, 20f, CREAM) { done("widget", entry.id, entry.name, R.mipmap.widget_icon) })
         setContentView(ScrollView(this).apply { setBackgroundColor(Color.BLACK); addView(list) })

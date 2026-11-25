@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Builds Titan Tools in WSL (atlas-build, as dev), in a build copy, so this repo is never edited by a build.
+# Builds TitanTools in WSL (atlas-build, as dev), in a build copy, so this repo is never edited by a build.
 #   bash /mnt/x/TitanTools/tools/build.sh [check|release]
 #   check    typecheck and the logic checks
 #   release  check, then a signed release APK in the build copy's dist/
-# Titan Tools uses the same patched Ink as TitanKeys (tools/ink/titankeys.patch, a copy of TitanKeys' own), found or made by
+# TitanTools uses the same patched Ink as TitanKeys (tools/ink/titankeys.patch, a copy of TitanKeys' own), found or made by
 # TitanKeys' tools/dev/build/ink.sh, and takes TitanKeys' build lock so the two never build at once.
 set -euo pipefail
 MODE="${1:-release}"
@@ -42,7 +42,7 @@ set +x
 . signing/credentials.env
 export INK_KEYSTORE_PASSWORD
 export INK_KEY_PASSWORD="${INK_KEY_PASSWORD:-$INK_KEYSTORE_PASSWORD}"
-# The helper apps (one per action, for Shortcut keys), signed with the same key, go inside Titan Tools to install from it.
+# The helper apps (one per action, for Shortcut keys), signed with the same key, go inside TitanTools to install from it.
 rm -rf android/assets/helpers dist/helpers
 bash helpers/build.sh android/assets/helpers signing/nightkeys-release.p12
 mkdir -p dist/helpers && cp android/assets/helpers/*.apk dist/helpers/

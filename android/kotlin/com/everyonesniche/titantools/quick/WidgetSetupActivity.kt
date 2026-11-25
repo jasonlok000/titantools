@@ -168,7 +168,7 @@ class WidgetSetupActivity : Activity() {
         if (WidgetButton.hasPressable(view) || tries >= 40) {
             loaded = true
             result.text = if (WidgetButton.hasPressable(view)) "Tap the button you want. Nothing gets pressed yet."
-                else "Titan Tools can't find buttons on this widget. Tap the part you want anyway."
+                else "TitanTools can't find buttons on this widget. Tap the part you want anyway."
             return
         }
         main.postDelayed({ waitForWidget(view, tries + 1) }, 200)

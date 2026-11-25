@@ -52,7 +52,7 @@ class LightService : Service(), SensorEventListener {
     private var registered = false
     private var policy: LightPolicy? = null
     private var screenOn = false
-    /** Titan Tools' own light is on (written straight to the light). */
+    /** TitanTools' own light is on (written straight to the light). */
     private var lit = false
     /** What the firmware's settings were last set to: "lit/level on/timeout", or null before the first time. */
     private var applied: String? = null
@@ -274,7 +274,7 @@ class LightService : Service(), SensorEventListener {
         when {
             darkness.darkRoom && light == null -> status = "Paused: this phone has no light sensor"
             !Shizuku.running() -> status = if (Shizuku.installed(this)) "Paused: start Shizuku" else "Paused: Shizuku isn't installed"
-            !Shizuku.allowed() -> status = "Paused: allow Titan Tools in Shizuku"
+            !Shizuku.allowed() -> status = "Paused: allow TitanTools in Shizuku"
             Installed.blocked(this, OldApps.Tool.Light) -> status = "Paused: NightKeys is still running"
             unsupported -> status = "Paused: the phone wouldn't take the light"
             Prefs.preset(this) == LightRule.Preset.PhonesOwn -> status = "The phone's own key light"
@@ -322,7 +322,7 @@ class LightService : Service(), SensorEventListener {
 
         if (lit && screenOn && ready && SystemClock.elapsedRealtime() - assertedAt >= ASSERT_MILLIS) {
             // A safety net only, as the firmware keeps the level itself. It also picks up a level set in the phone's own
-            // settings, which Titan Tools then uses instead of taking turns with it.
+            // settings, which TitanTools then uses instead of taking turns with it.
             assertedAt = SystemClock.elapsedRealtime()
             level = LightRecovery.own(this, true, level)
             try { Shell.light(level) } catch (error: Exception) {
@@ -383,7 +383,7 @@ class LightService : Service(), SensorEventListener {
     }
 
     /**
-     * Sets Titan Tools' light: the firmware's own settings first (VendorKeys: its stored level, which it writes on every key
+     * Sets TitanTools' light: the firmware's own settings first (VendorKeys: its stored level, which it writes on every key
      * press, the timeout and the automatic light off), then one direct write so it changes at once. Checked again every minute.
      */
     private fun apply(wantLit: Boolean, wantLevel: Boolean, timeout: String) {

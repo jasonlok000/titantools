@@ -14,11 +14,11 @@ import java.util.concurrent.Executors
 
 /**
  * Kill app: closes the app in front completely (force-stop, through Shizuku), then goes to the home screen. Never the keyboard,
- * the home screen, the system UI, Shizuku, Titan Tools, or the phone app during a call (KillRule).
+ * the home screen, the system UI, Shizuku, TitanTools, or the phone app during a call (KillRule).
  */
 class KillActivity : QuickActivity() {
     override fun act(done: (String?) -> Unit) {
-        if (!Prefs.on(this, Prefs.KILL_ON)) return done("Kill app is off. Turn it on in Titan Tools.")
+        if (!Prefs.on(this, Prefs.KILL_ON)) return done("Kill app is off. Turn it on in TitanTools.")
         val keyboard = KillRule.keyboardPackage(Settings.Secure.getString(contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD))
         val launchers = packageManager.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME), 0)
             .map { it.activityInfo.packageName }.toSet()
@@ -34,7 +34,7 @@ class KillActivity : QuickActivity() {
             }
             val message = when {
                 !Shizuku.running() -> "Start Shizuku, then try again."
-                !Shizuku.allowed() -> "Allow Titan Tools in Shizuku first. Open Titan Tools to set it up."
+                !Shizuku.allowed() -> "Allow TitanTools in Shizuku first. Open TitanTools to set it up."
                 else -> try {
                     val target = KillRule.frontApp(Shell.activityHistory())
                     when {
