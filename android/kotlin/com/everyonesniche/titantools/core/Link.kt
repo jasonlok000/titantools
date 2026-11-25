@@ -16,16 +16,17 @@ object Link {
 
     fun current(context: Context): LightRule.Link = link ?: load(context).also { link = it }
 
-    fun received(context: Context, typing: Boolean, at: Long) {
-        val next = current(context).after(typing, at, System.currentTimeMillis())
+    fun received(context: Context, typing: Boolean, at: Long, kind: String? = null) {
+        val next = current(context).after(typing, at, System.currentTimeMillis(), kind)
         link = next
         context.getSharedPreferences("link", Context.MODE_PRIVATE).edit()
-            .putLong("last_at", next.lastAt).putBoolean("typing", next.typing).putLong("stopped_at", next.stoppedAt).apply()
+            .putLong("last_at", next.lastAt).putBoolean("typing", next.typing).putLong("stopped_at", next.stoppedAt).putLong("typed_at", next.typedAt).apply()
         listeners.forEach { it() }
     }
 
     private fun load(context: Context): LightRule.Link {
         val p = context.getSharedPreferences("link", Context.MODE_PRIVATE)
-        return LightRule.Link(p.getLong("last_at", 0), p.getBoolean("typing", false), p.getLong("stopped_at", 0))
+        val lastAt = p.getLong("last_at", 0)
+        return LightRule.Link(lastAt, p.getBoolean("typing", false), p.getLong("stopped_at", 0), p.getLong("typed_at", lastAt))
     }
 }

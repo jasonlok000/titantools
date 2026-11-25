@@ -2,7 +2,7 @@ import { resource } from "ink";
 import { callNative, onNativeMessage } from "ink/native";
 
 export type LightActivity = "screen" | "field" | "typing";
-export type LightPreset = "night_typing" | "always_dark" | "phone" | "custom";
+export type LightPreset = "night_typing" | "dark_field" | "typing" | "always_dark" | "phone" | "custom";
 
 export type State = {
   version: string;
@@ -41,8 +41,8 @@ export type State = {
   titanKeys: { installed: boolean; selected: boolean };
   /** Update checks: on or off, a newer version found (or null), and the version code to show what's new for once (0 for none). */
   updates: { on: boolean; available: string | null; whatsNew: number };
-  /** Hold a letter for an action: on or off, the hold time, each mapped letter's action, and whether Accessibility is on. */
-  remap: { on: boolean; holdMillis: number; keys: Record<string, { id: string; label: string }>; service: boolean };
+  /** Keys for actions: on or off, the hold time, every key with its hold and double press actions, Accessibility and Shizuku. */
+  remap: { on: boolean; holdMillis: number; keys: RemapKey[]; service: boolean; shizuku: boolean };
 };
 
 /** The settings the screens can change, by their native names (Prefs.kt). */
@@ -76,9 +76,10 @@ export async function set(key: Setting, value: boolean | number | string) {
 export const open = (target: Page) => native("open", { target });
 /** The native pop-up with a slider: brightness, or the dark room level. */
 export const openSlider = (kind: "level" | "dark") => native("lightSlider", { kind });
-/** Sets letter [letter]'s hold action, or clears it with "". */
-export const setRemap = (letter: string, action: string) =>
-  then(native("remapSet", { key: 29 + letter.charCodeAt(0) - 97, action }));
+/** Sets key [code]'s hold or [double] press action, or clears it with "". */
+export const setRemap = (code: number, action: string, double: boolean) => then(native("remapSet", { key: code, action, double }));
+/** The next key pressed (within 10 seconds) is added to the list. */
+export const learnKey = () => native("remapLearn");
 /** Every launchable app, for a hold to open. */
 export const listApps = async (): Promise<{ id: string; label: string }[]> => JSON.parse(await native("apps"));
 /** Opens the newer release's page. */
@@ -95,7 +96,8 @@ export const ready = (s: State) => s.shizuku.installed && s.shizuku.running && s
 export const shizukuStopped = (s: State) => s.shizuku.installed && s.shizuku.everAllowed && !s.shizuku.running;
 
 const presetNames: Record<LightPreset, string> = {
-  night_typing: "In the dark, while typing", always_dark: "In the dark, always", phone: "Phone's own", custom: "Custom",
+  night_typing: "In the dark, while typing", dark_field: "In the dark, while a text box is open", typing: "While typing",
+  always_dark: "In the dark, always", phone: "Phone's own", custom: "Custom",
 };
 export const presetName = (preset: LightPreset) => presetNames[preset];
 
@@ -113,6 +115,9 @@ export const clock = (minutes: number) =>
 
 /** How many of the Shortcuts are on, for the home card. */
 export const shortcutsOn = (s: State) => [s.scale.on, s.rotation.on, s.flash.on, s.night.on, s.play.on, s.kill.on].filter(Boolean).length + s.widgets.length;
+
+export type RemapAction = { id: string; label: string } | null;
+export type RemapKey = { code: number; name: string; hold: RemapAction; double: RemapAction };
 
 export type WidgetButton = { id: string; name: string; app: string; button: string; slot: number; ok: boolean };
 

@@ -1,30 +1,38 @@
+import { useState } from "react";
 import { Field, Screen, Section, SettingsChoices, Toggle, useSnapshot } from "ink";
-import { open, set, state } from "../lib/titantools";
+import { learnKey, open, set, state } from "../lib/titantools";
 import { Note } from "../lib/note";
 
-const letters = "abcdefghijklmnopqrstuvwxyz".split("");
 const holdTimes = [400, 500, 700, 1000];
 
-/** Hold a letter for an action (docs/key-remap-plan.md): the switch, the hold time, and a row per letter. */
+/** Keys for actions (docs/key-remap-plan.md): the switch, the hold time, and a row per key with what it does. */
 export default function Remap() {
   const result = useSnapshot(state);
-  if (result.status !== "ready") return <Screen title="Hold keys for actions" />;
+  const [learning, setLearning] = useState(false);
+  if (result.status !== "ready") return <Screen title="Keys for actions" />;
   const { remap } = result.data;
-  return <Screen title="Hold keys for actions"
-    subtitle="Hold a letter to open an app or run an action. Only while you're not typing; a tap stays a tap.">
-    <Section title="Hold keys">
-      <Toggle label="Hold a letter for its action" value={remap.on} onChange={on => void set("remap_on", on)} />
+  const summary = (k: typeof remap.keys[number]) =>
+    [k.hold && `Hold: ${k.hold.label}`, k.double && `Twice: ${k.double.label}`].filter(Boolean).join(" · ") || "Nothing";
+  return <Screen title="Keys for actions"
+    subtitle="Hold a key, or press it twice, to open an app or run an action. Only while you're not typing; a click stays a click.">
+    <Section title="Keys for actions">
+      <Toggle label="Keys run their actions" value={remap.on} onChange={on => void set("remap_on", on)} />
       {!remap.service && <Field label="Turn on Titan Tools in Accessibility" onPress={() => void open("accessibility")}>To do</Field>}
       <Note>Needs Titan Tools in Accessibility to see the keys. In a text field, or while TitanKeys is typing, keys are left alone.</Note>
+      <Note>{remap.shizuku
+        ? "With Shizuku, a key with an action waits until you let go: a click then goes through as usual."
+        : "Without Shizuku, a key's first press still goes through before its action runs."}</Note>
     </Section>
     {remap.on && <Section title="Hold for">
       <SettingsChoices value={String(remap.holdMillis)} options={holdTimes.map(t => ({ value: String(t), label: `${t / 1000} seconds` }))}
         onChange={value => void set("remap_hold_millis", Number(value))} />
-      <Note>How long to hold a letter before its action runs.</Note>
+      <Note>How long to hold a key before its action runs. Pressing it twice means two presses within 0.3 seconds.</Note>
     </Section>}
-    {remap.on && <Section title="Letters">
-      {letters.map(letter => <Field key={letter} label={letter.toUpperCase()} href={`/remap/${letter}`}>
-        {remap.keys[letter]?.label ?? "Nothing"}</Field>)}
+    {remap.on && <Section title="Keys">
+      {remap.keys.map(k => <Field key={k.code} label={k.name} href={`/remap/${k.code}`}>{summary(k)}</Field>)}
+      <Field label="Add another key" disabled={!remap.service}
+        onPress={() => { setLearning(true); void learnKey(); }}>{learning ? "Press it now" : ""}</Field>
+      <Note>For the side key, Home, Recents and others: tap Add another key, then press the key within 10 seconds.</Note>
     </Section>}
   </Screen>;
 }

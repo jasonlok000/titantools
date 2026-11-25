@@ -100,8 +100,29 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
         Torch.ready(activity)
         LightRecovery.checkSoon(activity)
         Rotation.restoreSoon(activity)
-        com.everyonesniche.titantools.core.Updates.checkSoon(activity, fromApp = true) { changed() }
+        com.everyonesniche.titantools.core.Updates.checkSoon(activity, fromApp = true) {
+            changed()
+            main.post { offerUpdate() }
+        }
         askForNotifications()
+        main.postDelayed({ offerUpdate() }, 1_500)
+    }
+
+    private var updateOffered = false
+
+    /** Once per app open, while a newer release exists: a dialog, so the update is seen even with notifications off. */
+    private fun offerUpdate() {
+        if (updateOffered || activity.isFinishing || activity.isDestroyed) return
+        val release = com.everyonesniche.titantools.core.Updates.available(activity) ?: return
+        updateOffered = true
+        android.app.AlertDialog.Builder(activity)
+            .setTitle("Titan Tools ${release.version} is out")
+            .setMessage("Titan Tools doesn't update by itself. Get it opens the release page, where you can download it.")
+            .setPositiveButton("Get it") { _, _ ->
+                try { activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(release.url))) } catch (ignored: Exception) {}
+            }
+            .setNegativeButton("Later", null)
+            .show()
     }
 
     /** The update notice needs notifications (Android asks once or twice, then stops showing the question by itself). */
@@ -168,8 +189,13 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
             "lightSlider" -> activity.startActivity(Intent(activity, com.everyonesniche.titantools.light.SliderActivity::class.java)
                 .putExtra(com.everyonesniche.titantools.light.SliderActivity.EXTRA_KIND, data.getString("kind")))
             "remapSet" -> {
-                com.everyonesniche.titantools.hold.KeyRemap.set(activity, data.getInt("key"), data.getString("action"))
+                com.everyonesniche.titantools.hold.KeyRemap.set(activity, data.getInt("key"), data.getString("action"),
+                    data.optBoolean("double", false))
                 changed()
+            }
+            "remapLearn" -> {
+                val service = com.everyonesniche.titantools.hold.HoldService.live ?: throw IllegalStateException("Turn on Titan Tools in Accessibility first")
+                service.learnKey()
             }
             "seenWhatsNew" -> {
                 com.everyonesniche.titantools.core.Updates.seenWhatsNew(activity)
@@ -412,13 +438,16 @@ private class TitanToolsAdapter(private val activity: MainActivity) : NativeAdap
                 .put("darkTheme", prefs.getBoolean(Prefs.NIGHT_DARK_THEME, false)))
             .put("oldApps", old)
             .put("remap", com.everyonesniche.titantools.hold.KeyRemap.let { remap ->
-                val keys = JSONObject()
-                remap.map(activity).forEach { (code, action) ->
-                    keys.put(('a' + (code - android.view.KeyEvent.KEYCODE_A)).toString(),
-                        JSONObject().put("id", action).put("label", remap.label(activity, action)))
+                val holds = remap.map(activity)
+                val doubles = remap.doubles(activity)
+                fun action(id: String?) = id?.let { JSONObject().put("id", it).put("label", remap.label(activity, it)) } ?: JSONObject.NULL
+                val keys = JSONArray()
+                remap.keys(activity).forEach { code ->
+                    keys.put(JSONObject().put("code", code).put("name", remap.name(code)).put("hold", action(holds[code]))
+                        .put("double", action(doubles[code])))
                 }
                 JSONObject().put("on", remap.on(activity)).put("holdMillis", remap.holdMillis(activity)).put("keys", keys)
-                    .put("service", accessibility)
+                    .put("service", accessibility).put("shizuku", ready)
             })
             .put("titanKeys", JSONObject().put("installed", Installed.has(activity, Installed.TITANKEYS))
                 .put("selected", HoldPause.pausedFor(defaultIme)))

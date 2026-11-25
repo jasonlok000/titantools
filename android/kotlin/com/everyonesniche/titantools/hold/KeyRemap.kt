@@ -7,24 +7,34 @@ import android.content.pm.PackageManager
 import android.view.KeyEvent
 import com.everyonesniche.titantools.core.Prefs
 import com.everyonesniche.titantools.quick.TriggerActivity
+import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Hold a letter for an action (docs/key-remap-plan.md), the simple version: only while you aren't typing, long holds only,
- * taps untouched; the action opens an app, runs one of Titan Tools' own actions, or a system action (Home, Back …). No Shizuku.
+ * Keys for actions (docs/key-remap-plan.md): hold a key, or press it twice, to open an app, run one of Titan Tools' actions or
+ * a system action. Only while you aren't typing. Any key the Accessibility key filter gets can have them: the letters, Back,
+ * Sym, fn, and keys added by pressing them (the side key, Recents …).
  *
- * Titan Tools can't re-send a key without Shizuku, so the press goes on to the app as usual; when the key is still down after
- * the hold time (its repeats come), the action runs and the repeats and the release are taken.
+ * Without Shizuku the first press can't be held back and sent later, so it goes to the app as usual; with Shizuku it's held
+ * back and sent again when it turns out to be a plain click (HoldService.remap).
  *
- * Saved as a JSON object, key code → action id: "app:<package>", "do:<TriggerActivity action>", "widget:<1-5>" or
- * "global:<home|back|recents|notifications|quick|lock|screenshot>".
+ * Saved as JSON objects, key code → action id, one for holds and one for double presses: "app:<package>",
+ * "do:<TriggerActivity action>", "widget:<1-5>" or "global:<home|back|recents|notifications|quick|lock|screenshot>".
  */
 object KeyRemap {
     const val ON = "remap_on"
     const val MAP = "remap_map"
+    const val DOUBLE = "remap_double"
+    const val EXTRA_KEYS = "remap_extra_keys"
     const val HOLD = "remap_hold_millis"
     val HOLD_TIMES = listOf(400, 500, 700, 1000)
     const val DEFAULT_HOLD = 500
+    /** The second press of a double press comes within this. */
+    const val DOUBLE_MILLIS = 300L
+
+    /** The keys offered without adding them: the letters, then Back, Sym and fn. */
+    val SPECIALS = listOf(KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_SYM, KeyEvent.KEYCODE_FUNCTION)
+    val LETTERS = (KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z).toList()
 
     val GLOBALS = linkedMapOf(
         "home" to ("Home" to AccessibilityService.GLOBAL_ACTION_HOME),
@@ -40,20 +50,52 @@ object KeyRemap {
 
     fun holdMillis(context: Context): Int = Prefs.of(context).getInt(HOLD, DEFAULT_HOLD).takeIf { it in HOLD_TIMES } ?: DEFAULT_HOLD
 
-    fun map(context: Context): Map<Int, String> {
-        val json = try { JSONObject(Prefs.of(context).getString(MAP, null) ?: "{}") } catch (error: Exception) { JSONObject() }
+    private fun read(context: Context, name: String): Map<Int, String> {
+        val json = try { JSONObject(Prefs.of(context).getString(name, null) ?: "{}") } catch (error: Exception) { JSONObject() }
         return json.keys().asSequence().mapNotNull { k -> k.toIntOrNull()?.let { it to json.getString(k) } }.toMap()
     }
 
-    /** Sets or clears ([action] empty) the action of letter key [keyCode]. */
-    fun set(context: Context, keyCode: Int, action: String) {
-        require(keyCode in KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z) { "Only letter keys" }
+    fun map(context: Context): Map<Int, String> = read(context, MAP)
+    fun doubles(context: Context): Map<Int, String> = read(context, DOUBLE)
+
+    /** Keys added by pressing them. */
+    fun extraKeys(context: Context): List<Int> {
+        val json = try { JSONArray(Prefs.of(context).getString(EXTRA_KEYS, null) ?: "[]") } catch (error: Exception) { JSONArray() }
+        return (0 until json.length()).map { json.getInt(it) }
+    }
+
+    fun addKey(context: Context, keyCode: Int) {
+        if (keyCode in LETTERS || keyCode in SPECIALS || keyCode in extraKeys(context) || !usable(keyCode)) return
+        Prefs.of(context).edit().putString(EXTRA_KEYS, JSONArray(extraKeys(context) + keyCode).toString()).apply()
+    }
+
+    /** All the keys the screen lists. */
+    fun keys(context: Context): List<Int> = LETTERS + SPECIALS + extraKeys(context)
+
+    /** Never the power or volume keys: the phone needs them. */
+    fun usable(keyCode: Int): Boolean = keyCode in 1..400 && keyCode != KeyEvent.KEYCODE_POWER &&
+        keyCode != KeyEvent.KEYCODE_VOLUME_UP && keyCode != KeyEvent.KEYCODE_VOLUME_DOWN && keyCode != KeyEvent.KEYCODE_UNKNOWN
+
+    fun name(keyCode: Int): String = when (keyCode) {
+        in LETTERS -> ('A' + (keyCode - KeyEvent.KEYCODE_A)).toString()
+        KeyEvent.KEYCODE_BACK -> "Back"
+        KeyEvent.KEYCODE_SYM -> "Sym"
+        KeyEvent.KEYCODE_FUNCTION -> "fn"
+        KeyEvent.KEYCODE_HOME -> "Home"
+        KeyEvent.KEYCODE_APP_SWITCH -> "Recents"
+        else -> KeyEvent.keyCodeToString(keyCode).removePrefix("KEYCODE_").lowercase().replace('_', ' ')
+            .replaceFirstChar { it.uppercase() }
+    }
+
+    /** Sets or clears ([action] empty) the [double] press or hold action of [keyCode]. */
+    fun set(context: Context, keyCode: Int, action: String, double: Boolean) {
+        require(usable(keyCode)) { "Not a key that can have an action" }
         require(action.isEmpty() || valid(action)) { "Unknown action" }
-        val next = map(context).toMutableMap()
+        val next = (if (double) doubles(context) else map(context)).toMutableMap()
         if (action.isEmpty()) next.remove(keyCode) else next[keyCode] = action
         val json = JSONObject()
         next.forEach { (k, v) -> json.put(k.toString(), v) }
-        Prefs.of(context).edit().putString(MAP, json.toString()).apply()
+        Prefs.of(context).edit().putString(if (double) DOUBLE else MAP, json.toString()).apply()
     }
 
     fun valid(action: String): Boolean = when {
@@ -70,7 +112,11 @@ object KeyRemap {
             "Open ${context.packageManager.getApplicationLabel(info)}"
         } catch (error: PackageManager.NameNotFoundException) { "Open an app that's gone" }
         action.startsWith("do:") -> TriggerActivity.ACTIONS[action.removePrefix("do:")] ?: action
-        action.startsWith("widget:") -> "Widget ${action.removePrefix("widget:")}"
+        action.startsWith("widget:") -> {
+            val slot = action.removePrefix("widget:").toIntOrNull() ?: 0
+            val app = com.everyonesniche.titantools.quick.WidgetButton.all(context).firstOrNull { it.slot == slot }?.app
+            if (app.isNullOrBlank()) "Widget $slot" else "Widget $slot – $app"
+        }
         action.startsWith("global:") -> GLOBALS[action.removePrefix("global:")]?.first ?: action
         else -> action
     }

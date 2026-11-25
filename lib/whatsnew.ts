@@ -3,6 +3,11 @@
  * own shows the newest entry at or below it. Add one for every build handed out.
  */
 const notes: Record<number, string[]> = {
+  29: [
+    "Keys for actions: hold a key, or press it twice, to open an app or run an action. Letters, Back, Sym, fn, and any key you add.",
+    "Keyboard light: new modes, In the dark while a text box is open, and While typing. Typing now means keys and swipes, not a box opening.",
+    "A new version now also shows a message when you open Titan Tools.",
+  ],
   23: [
     "Update notices: Titan Tools now looks for new versions and tells you, with a link to the release page.",
     "Keyboard light: brightness and dark room are in percent; tap one to slide it, and brightness lights the keys so you can see it.",

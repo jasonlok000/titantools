@@ -90,6 +90,13 @@ private fun lightRule() {
     check("older message ignored", stopped.after(true, now - 5000, now + 10) == stopped)
     check("a time from the future counts as now", none.after(true, now + 60_000, now).lastAt == now)
     check("a missing time counts as now", none.after(true, 0, now).lastAt == now)
+    val opened = none.after(true, now - 500, now, "field")
+    check("a field opening doesn't light Typing", !LightRule.lit(LightRule.Source.LinkTyping, true, true, opened, now, 2000))
+    check("a field opening lights Text field open", LightRule.lit(LightRule.Source.LinkField, true, true, opened, now, 2000))
+    check("kind typing lights Typing", LightRule.lit(LightRule.Source.LinkTyping, true, true, opened.after(true, now, now, "typing"), now, 2000))
+    check("no kind (older TitanKeys) still lights Typing", LightRule.lit(LightRule.Source.LinkTyping, true, true, none.after(true, now - 500, now), now, 2000))
+    check("while typing: any light", LightRule.presetLists(LightRule.Preset.Typing)?.second == LightRule.Activity.Typing &&
+        LightRule.presetLists(LightRule.Preset.Typing)?.first?.anyTime == true)
     check("a message from before a clock change isn't alive", !LightRule.alive(typing, now - 10_000))
 
     // Presets.

@@ -46,8 +46,9 @@ export default function Home() {
       <Field label="Hold time and more" href="/hold">{""}</Field>
     </Section>
 
-    <Section title="Hold keys for actions">
-      <Field label="Hold a letter to open an app or run an action" href="/remap">{s.remap.on ? `${Object.keys(s.remap.keys).length} set` : "Off"}</Field>
+    <Section title="Keys for actions">
+      <Field label="Hold a key, or press it twice, to open an app or run an action" href="/remap">
+        {s.remap.on ? `${s.remap.keys.filter(k => k.hold || k.double).length} set` : "Off"}</Field>
     </Section>
 
     <Section title="Shortcuts">

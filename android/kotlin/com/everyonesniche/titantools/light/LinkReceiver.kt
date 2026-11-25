@@ -14,7 +14,9 @@ class LinkReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != ACTION) return
         if (!intent.hasExtra("typing")) return
-        Link.received(context.applicationContext, intent.getBooleanExtra("typing", false), intent.getLongExtra("at", 0))
+        // "kind": "field" (a field opened) or "typing" (a key, a swipe or a touchpad touch); none from older TitanKeys.
+        Link.received(context.applicationContext, intent.getBooleanExtra("typing", false), intent.getLongExtra("at", 0),
+            intent.getStringExtra("kind"))
     }
 
     companion object {

@@ -16,18 +16,24 @@ package com.everyonesniche.titantools.light
 object LightRule {
     const val LINK_FRESH_MILLIS = 10 * 60_000L
 
-    /** What TitanKeys last said. [lastAt] is 0 before any message. */
-    data class Link(val lastAt: Long = 0, val typing: Boolean = false, val stoppedAt: Long = 0) {
+    /**
+     * What TitanKeys last said. [lastAt] is 0 before any message. [typedAt] is the last message that was real typing (a key, a
+     * swipe or a touchpad touch): newer TitanKeys says kind "field" when a field only opened, which Typing ignores. Older
+     * TitanKeys sends no kind, and every message counts as typing, as before.
+     */
+    data class Link(val lastAt: Long = 0, val typing: Boolean = false, val stoppedAt: Long = 0, val typedAt: Long = lastAt) {
         /** The link after TitanKeys says [typing] at [at], seen at [now]. A message older than the last one is ignored. */
-        fun after(typing: Boolean, at: Long, now: Long): Link {
+        fun after(typing: Boolean, at: Long, now: Long, kind: String? = null): Link {
             val time = if (at <= 0 || at > now) now else at
             if (time < lastAt) return this
-            return Link(time, typing, if (typing) 0 else time)
+            return Link(time, typing, if (typing) 0 else time, if (typing && kind != KIND_FIELD) time else typedAt)
         }
 
         /** TitanKeys has sent at least one message: it has the link. */
         val seen: Boolean get() = lastAt > 0
     }
+
+    const val KIND_FIELD = "field"
 
     fun alive(link: Link, now: Long): Boolean = link.lastAt > 0 && now >= link.lastAt && now - link.lastAt < LINK_FRESH_MILLIS
 
@@ -85,7 +91,7 @@ object LightRule {
         return when (source) {
             Source.Screen -> true
             Source.LinkField -> link.typing || (link.stoppedAt > 0 && now - link.stoppedAt in 0 until stayMillis)
-            Source.LinkTyping -> (link.lastAt > 0 && now - link.lastAt in 0 until stayMillis) || (stayMillis == 0L && link.typing)
+            Source.LinkTyping -> (link.typedAt > 0 && now - link.typedAt in 0 until stayMillis) || (stayMillis == 0L && link.typing && link.typedAt == link.lastAt)
             Source.InputFlag -> fieldOpen || (fieldClosedAt > 0 && now - fieldClosedAt in 0 until stayMillis)
             Source.FirmwareKeys -> false
         }
@@ -102,7 +108,7 @@ object LightRule {
         val times = mutableListOf<Long>()
         if (link.lastAt > 0) times += link.lastAt + LINK_FRESH_MILLIS
         when (source) {
-            Source.LinkTyping -> times += link.lastAt + stayMillis
+            Source.LinkTyping -> times += link.typedAt + stayMillis
             Source.LinkField -> if (link.stoppedAt > 0) times += link.stoppedAt + stayMillis
             Source.InputFlag -> if (fieldClosedAt > 0) times += fieldClosedAt + stayMillis
             else -> Unit
@@ -112,7 +118,7 @@ object LightRule {
 
     /** The light screen's presets. "Phone's own" hands the light back; "Custom" keeps the lists as they are. */
     enum class Preset(val id: String) {
-        NightTyping("night_typing"), AlwaysInTheDark("always_dark"), PhonesOwn("phone"), Custom("custom");
+        NightTyping("night_typing"), DarkField("dark_field"), Typing("typing"), AlwaysInTheDark("always_dark"), PhonesOwn("phone"), Custom("custom");
 
         companion object {
             fun of(id: String?): Preset = entries.firstOrNull { it.id == id } ?: AlwaysInTheDark
@@ -123,6 +129,8 @@ object LightRule {
     fun presetLists(preset: Preset): Pair<Darkness, Activity>? = when (preset) {
         Preset.NightTyping -> Darkness(darkRoom = true, nightHours = false, darkTheme = false, anyTime = false) to Activity.Typing
         Preset.AlwaysInTheDark -> Darkness(darkRoom = true, nightHours = false, darkTheme = false, anyTime = false) to Activity.Screen
+        Preset.DarkField -> Darkness(darkRoom = true, nightHours = false, darkTheme = false, anyTime = false) to Activity.Field
+        Preset.Typing -> Darkness(darkRoom = false, nightHours = false, darkTheme = false, anyTime = true) to Activity.Typing
         Preset.PhonesOwn, Preset.Custom -> null
     }
 }

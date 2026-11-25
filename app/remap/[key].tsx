@@ -12,7 +12,6 @@ const actions = [
   { value: "do:rotate", label: "Rotate" },
   { value: "do:layout", label: "Switch layout" },
   { value: "do:kill", label: "Kill app" },
-  ...[1, 2, 3, 4, 5].map(n => ({ value: `widget:${n}`, label: `Widget ${n}` })),
   { value: "global:home", label: "Home" },
   { value: "global:back", label: "Back" },
   { value: "global:recents", label: "Recent apps" },
@@ -22,18 +21,31 @@ const actions = [
   { value: "global:screenshot", label: "Screenshot" },
 ];
 
-/** One letter's hold action: an action, or an app to open. */
+/** One key's actions: what holding it does, and what pressing it twice does. */
 export default function RemapKey() {
   const { key } = useRouteParams("/remap/[key]");
+  const code = Number(key);
   const result = useSnapshot(state);
   const [apps, setApps] = useState<{ id: string; label: string }[]>([]);
+  const [twice, setTwice] = useState(false);
   useEffect(() => void listApps().then(setApps), []);
-  if (result.status !== "ready") return <Screen title={`Hold ${key.toUpperCase()}`} />;
-  const current = result.data.remap.keys[key]?.id ?? "";
-  const pick = (action: string) => void setRemap(key, action).then(() => back());
-  return <Screen title={`Hold ${key.toUpperCase()}`} subtitle={result.data.remap.keys[key]?.label ?? "Nothing yet"}>
+  const k = result.status === "ready" ? result.data.remap.keys.find(x => x.code === code) : undefined;
+  if (result.status !== "ready" || !k) return <Screen title="Key" />;
+  const current = (twice ? k.double : k.hold)?.id ?? "";
+  // Widget slots show their app: "Widget 1 – 1Valet".
+  const widgets = [1, 2, 3, 4, 5].map(n => {
+    const app = result.data.widgets.find(w => w.slot === n)?.app;
+    return { value: `widget:${n}`, label: app ? `Widget ${n} – ${app}` : `Widget ${n}` };
+  });
+  const options = [...actions.slice(0, 7), ...widgets, ...actions.slice(7)];
+  const pick = (action: string) => void setRemap(code, action, twice).then(() => back());
+  return <Screen title={k.name} subtitle={`Hold: ${k.hold?.label ?? "nothing"} · Twice: ${k.double?.label ?? "nothing"}`}>
+    <Section title="When">
+      <SettingsChoices value={twice ? "twice" : "hold"} options={[{ value: "hold", label: "Held" }, { value: "twice", label: "Pressed twice" }]}
+        onChange={value => setTwice(value === "twice")} />
+    </Section>
     <Section title="Action">
-      <SettingsChoices value={current} options={actions} onChange={pick} />
+      <SettingsChoices value={current} options={options} onChange={pick} />
       <Note>Wi-Fi, Bluetooth and mobile data can't be switched directly without Shizuku: Quick settings opens them.</Note>
     </Section>
     <Section title="Open an app">

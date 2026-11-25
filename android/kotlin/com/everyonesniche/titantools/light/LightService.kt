@@ -249,7 +249,11 @@ class LightService : Service(), SensorEventListener {
         policy.tick(SystemClock.elapsedRealtime())
         settings = settingsKey()
         val link = Link.current(this)
-        if (seenLinkAt >= 0 && link.lastAt != seenLinkAt) trigger = if (link.typing) "TitanKeys-TYPING" else trigger ?: "TitanKeys-stopped"
+        if (seenLinkAt >= 0 && link.lastAt != seenLinkAt) trigger = when {
+            !link.typing -> trigger ?: "TitanKeys-stopped"
+            link.typedAt == link.lastAt -> "TitanKeys-TYPING"
+            else -> "TitanKeys-field"
+        }
         seenLinkAt = link.lastAt
         val titanKeys = HoldPause.pausedFor(Settings.Secure.getString(contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD))
         val darkness = Prefs.darkness(this)
@@ -355,7 +359,7 @@ class LightService : Service(), SensorEventListener {
         val details = "status=\"$status\" lit=$lit want=$wantLit level=${if (wantLevel) level else 0} dark=$dark " +
             "lux=${policy?.lux()} darkBelow=$darkLux sensor=${policy?.reason()} screen=$screenOn locked=${locked()} " +
             "night=${Prefs.on(this, Prefs.NIGHT_ACTIVE)} nightTyping=$nightTyping activity=${activity.id} source=$source " +
-            "link=${LightRule.alive(link, now)} linkTyping=${link.typing} lastLink=$linkAge stay=${Prefs.staySeconds(this)}s " +
+            "link=${LightRule.alive(link, now)} linkTyping=${link.typing} lastLink=$linkAge lastTyped=${if (link.typedAt > 0) "${(now - link.typedAt) / 1000}s" else "never"} stay=${Prefs.staySeconds(this)}s " +
             "shizuku=${Shizuku.running()}/${Shizuku.allowed()} ready=$ready unsupported=$unsupported field=$fieldOpen"
         val decision = "$status/$lit/$wantLit/$wantLevel/$dark/$source/$screenOn/$ready"
         if (decision != loggedDecision) {
@@ -367,6 +371,8 @@ class LightService : Service(), SensorEventListener {
         when {
             lit -> LightLog.write("trigger $what", "lit")
             what == "TitanKeys-stopped" -> Unit
+            // A field opening isn't typing: in Typing mode it's meant to stay off.
+            what == "TitanKeys-field" && source == LightRule.Source.LinkTyping -> LightLog.write("trigger $what", "off: a field opened, not typing")
             source == LightRule.Source.FirmwareKeys && wantLevel -> LightLog.write("trigger $what", "firmware lights on keys at level $level")
             // Not dark or the screen off: off as meant, but still noted with the reason, in case the reading was wrong.
             !dark || !screenOn -> LightLog.write("trigger $what", "off: $details")
