@@ -24,8 +24,13 @@ Expected signer:
 
 ## Cut the release
 
-Copy the APK to a Windows path, then:
+Copy the APK to a Windows path, and also copy it as a plain `titantools.apk` (the website's Download button points at
+`releases/latest/download/titantools.apk`, so every release needs that name too). Then:
 
-    gh release create v<versionName> <apk> --repo jasonlok000/titantools --prerelease --title "Titan Tools <versionName>" --notes "<short notes>"
+    gh release create v<versionName> <apk> titantools.apk --repo jasonlok000/titantools --prerelease --title "Titan Tools <versionName>" --notes "<short notes>"
+
+`releases/latest` only finds full releases, never pre-releases: while every release is a pre-release, that link answers 404.
+Mark a release as a full release (drop `--prerelease`, or `gh release edit v<versionName> --prerelease=false`) when the
+owner says it's ready, and the Download button works from then on.
 
 Bump versionCode for every build you hand out. Use `--prerelease` until a build has been used daily without bugs.
